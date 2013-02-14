@@ -14,7 +14,7 @@ START_TEST(test_lcs1)
         res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     ck_assert(lcs_len == 7);
-    char *seq = lcs_sequence(res_matr, lcs_len, str1, str2);
+    char *seq = lcs_sequence(res_matr, lcs_len, str1, str1_len, str2, str2_len);
     ck_assert_str_eq(seq, "emt ole");
     for(i = 0; i <= str1_len; i++)
         free(res_matr[i]);
@@ -32,7 +32,7 @@ START_TEST(test_lcs2)
         res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     ck_assert(lcs_len == 3);
-    char *seq = lcs_sequence(res_matr, lcs_len, str1, str2);
+    char *seq = lcs_sequence(res_matr, lcs_len, str1, str1_len, str2, str2_len);
     ck_assert_str_eq(seq, "gia");
     for(i = 0; i <= str1_len; i++)
         free(res_matr[i]);
@@ -50,7 +50,7 @@ START_TEST(test_lcs3)
         res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     ck_assert(lcs_len == 4);
-    char *seq = lcs_sequence(res_matr, lcs_len, str1, str2);
+    char *seq = lcs_sequence(res_matr, lcs_len, str1, str1_len, str2, str2_len);
     ck_assert_str_eq(seq, "akwo");
     for(i = 0; i <= str1_len; i++)
         free(res_matr[i]);
@@ -68,7 +68,7 @@ START_TEST(test_no_lcs)
         res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     ck_assert(lcs_len == 0);
-    char *seq = lcs_sequence(res_matr, lcs_len, str1, str2);
+    char *seq = lcs_sequence(res_matr, lcs_len, str1, str1_len, str2, str2_len);
     ck_assert_str_eq(seq, "");
     for(i = 0; i <= str1_len; i++)
         free(res_matr[i]);

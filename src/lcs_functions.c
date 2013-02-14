@@ -2,34 +2,35 @@
 
 int lcs_length(int **L, char *str1, int len1, char *str2, int len2) {
     int i, k;
-    for(i = len1; i >= 0; i--) {
-        for(k = len2; k >= 0; k--) {
-            if(i == len1 || k == len2)
+    for(i = 0; i <= len1; i++) {
+        for(k = 0; k <= len2; k++) {
+            if(i == 0 || k == 0)
                 L[i][k] = 0;
-            else if (str1[i] == str2[k])
-                L[i][k] = 1 + L[i+1][k+1];
+            else if (str1[i-1] == str2[k-1])
+                L[i][k] = 1 + L[i-1][k-1];
             else
-                L[i][k] = max(L[i+1][k], L[i][k+1]);
+                L[i][k] = max(L[i-1][k], L[i][k-1]);
         }
     }
-    return L[0][0];
+    return L[len1][len2];
 }
 
-char* lcs_sequence(int **L, int len, char *str1, char *str2) {
+char* lcs_sequence(int **L, int len, char *str1, int str1_len, char *str2, int str2_len) {
     char *sequence = malloc(sizeof(char) * len + 1);
-    int seq_index = 0;
-    int i, k;
-    i = k = 0;
-    while(L[i][k] > 0) {
-        if(str1[i] == str2[k]) {
-            sequence[seq_index++] = str1[i];
-            i++; k++;
-        } else if(L[i+1][k] >= L[i][k+1])
-            i++;
-        else
-            k++;
-    }
+    int seq_index = len;
     sequence[seq_index] = '\0';
+    int i, k;
+    i = str1_len;
+    k = str2_len ;
+    while(L[i][k] > 0) {
+        if(str1[i-1] == str2[k-1]) {
+            sequence[--seq_index] = str1[i-1];
+            i--; k--;
+        } else if(L[i-1][k] >= L[i][k-1])
+            i--;
+        else
+            k--;
+    }
     return sequence;
 }
 
