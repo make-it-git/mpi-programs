@@ -1,7 +1,7 @@
-CC=gcc
+CC=mpicc
 CFLAGS=-ggdb -O0 -Wall -Wextra
 
-all: bin/lcs_sequential bin/test_lcs_sequential bin/test_lcs_parallel
+all: bin/lcs_sequential bin/test_lcs_sequential bin/test_lcs_parallel bin/lcs_parallel
 
 obj/lcs_functions.o: src/lcs_functions.c src/lcs_functions.h
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -17,6 +17,9 @@ bin/test_lcs_sequential: src/test_lcs_sequential.c obj/lcs_functions.o
 
 bin/test_lcs_parallel: src/test_lcs_parallel.c obj/lcs_functions.o
 	$(CC) $(CFLAGS) -o bin/test_lcs_parallel src/test_lcs_parallel.c obj/lcs_functions.o -lcheck
+
+bin/lcs_parallel: src/lcs_parallel.c obj/lcs_functions.o
+	$(CC) $(CFLAGS) -o bin/lcs_parallel src/lcs_parallel.c obj/lcs_functions.o
 
 clean:
 	rm -f obj/*.o bin/*

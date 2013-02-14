@@ -34,17 +34,18 @@ char* lcs_sequence(int **L, int len, char *str1, int str1_len, char *str2, int s
     return sequence;
 }
 
-inline void calc_Pij(int **P, int i, int j, char *str2, char *alphabet) {
+//inline void calc_Pij(int **P, int i, int j, char *str2, char *alphabet) {
+inline void calc_Pij(int *P, int i, int j, char *str2, char *alphabet) {
     if(j == 0) {
-        P[i][j] = 0;
+        P[j] = 0;
     } else if(str2[j-1] == alphabet[i]) {
-        P[i][j] = j;
+        P[j] = j;
     } else {
-        P[i][j] = P[i][j-1];
+        P[j] = P[j-1];
     }
 }
 
-void calc_Sij(int **S, int i, int j, char *str1, int **P, char *alphabet) {
+inline void calc_Sij(int **S, int i, int j, char *str1, int **P, char *alphabet) {
     if(i == 0 || j == 0) {
         S[i][j] = 0;
     } else {
@@ -53,6 +54,27 @@ void calc_Sij(int **S, int i, int j, char *str1, int **P, char *alphabet) {
             S[i][j] = max(S[i-1][j], 0);
         } else {
             S[i][j] = max(S[i-1][j], S[i-1][P[c][j] - 1] + 1);
+        }
+    }
+}
+
+void parallel_calc_P(char *str2, int str2_len, char *alphabet, int alphabet_len) {
+    int i,j;
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    size -= 1; // rank=0 does not work here
+    //int **P = malloc(sizeof(void*) * alphabet_len);
+    for(i = 0; i < alphabet_len; i++) {
+        if(((i % size) + 1) == rank) {
+            //printf("rank = %d calculating P[%d]\n", rank, i);
+            int *P = malloc(sizeof(void*) * (str2_len + 1));
+            for(j = 0; j <= str2_len; j++) {
+                calc_Pij(P, i, j, str2, alphabet);
+            }
+            MPI_Send(P, str2_len+1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            free(P);
         }
     }
 }
