@@ -32,3 +32,13 @@ char* lcs_sequence(int **L, int len, char *str1, char *str2) {
     sequence[seq_index] = '\0';
     return sequence;
 }
+
+inline void calc_Pij(int **P, int i, int j, char *str2, char *alphabet) {
+    if(j == 0) {
+        P[i][j] = 0;
+    } else if(str2[j-1] == alphabet[i]) {
+        P[i][j] = j;
+    } else {
+        P[i][j] = P[i][j-1];
+    }
+}
