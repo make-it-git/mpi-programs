@@ -42,3 +42,16 @@ inline void calc_Pij(int **P, int i, int j, char *str2, char *alphabet) {
         P[i][j] = P[i][j-1];
     }
 }
+
+void calc_Sij(int **S, int i, int j, char *str1, int **P, char *alphabet) {
+    if(i == 0 || j == 0) {
+        S[i][j] = 0;
+    } else {
+        int c = strchr(alphabet, str1[i-1]) - alphabet;
+        if(P[c][j] == 0) {
+            S[i][j] = max(S[i-1][j], 0);
+        } else {
+            S[i][j] = max(S[i-1][j], S[i-1][P[c][j] - 1] + 1);
+        }
+    }
+}
