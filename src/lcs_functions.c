@@ -57,6 +57,18 @@ inline void calc_Sij(int **S, int i, int j, char *str1, int **P, char *alphabet)
         }
     }
 }
+inline void calc_S_current(int *S_current, int *S_prev, int i, int j, char *str1, int **P, char *alphabet) {
+    if(i == 0 || j == 0) {
+        S_current[j] = 0;
+    } else {
+        int c = strchr(alphabet, str1[i-1]) - alphabet;
+        if(P[c][j] == 0) {
+            S_current[j] = max(S_prev[j], 0);
+        } else {
+            S_current[j] = max(S_prev[j], S_prev[P[c][j] - 1] + 1);
+        }
+    }
+}
 
 void parallel_calc_P(char *str2, int str2_len, char *alphabet, int alphabet_len) {
     int i,j;
@@ -77,4 +89,29 @@ void parallel_calc_P(char *str2, int str2_len, char *alphabet, int alphabet_len)
             free(P);
         }
     }
+}
+
+void parallel_calc_S(int **P, char *alphabet, char *str1, int str1_len, int str2_len) {
+    int i, j, rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    size -= 1; // rank=0 does not work here
+    int *S_current = malloc(sizeof(int) * (str2_len + 1));
+    int *S_prev = malloc(sizeof(int) * (str2_len + 1));
+    for(i = 0; i <= str1_len; i++) {
+        if(i > 0) {
+            // get previous row
+            MPI_Bcast(S_prev, str2_len+1, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+        for(j = 0; j <= str2_len; j++) {
+            if(((j % size) + 1) == rank) {
+                //printf("parallel_cals_S: rank=%d calculating S[%d][%d]\n", rank, i, j);
+                calc_S_current(S_current, S_prev, i, j, str1, P, alphabet);
+            }
+        }
+        MPI_Send(S_current, str2_len+1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    }
+    free(S_current);
+    free(S_prev);
 }
