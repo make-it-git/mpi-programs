@@ -14,6 +14,7 @@ int main(int argc, char **argv) {
     //char *alphabet = "ATCG";
     char *alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     int alp_len = strlen(alphabet);*/
+    double start_t, end_t;
     MPI_Init(&argc, &argv);
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -24,6 +25,7 @@ int main(int argc, char **argv) {
     char *alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     int alp_len = strlen(alphabet);
     if(rank == 0) {
+        start_t = MPI_Wtime();
         char *c;
         FILE *f1 = fopen(argv[1], "rb");
         FILE *f2 = fopen(argv[2], "rb");
@@ -37,11 +39,23 @@ int main(int argc, char **argv) {
         str2_len = strlen(str2);
         fclose(f1);
         fclose(f2);
+        end_t = MPI_Wtime();
+        printf("rank=%d: %f seconds for [input from files]\n", rank, end_t-start_t);
+    }
+    if(rank==0) {
+        start_t = MPI_Wtime();
     }
     MPI_Bcast(&str1_len, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&str2_len, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(str1, str1_len, MPI_CHAR, 0, MPI_COMM_WORLD);
     MPI_Bcast(str2, str2_len, MPI_CHAR, 0, MPI_COMM_WORLD);
+    if(rank==0) {
+        end_t = MPI_Wtime();
+        printf("rank=%d: %f seconds for [MPI_Bcast]\n", rank, end_t-start_t);
+    }
+    if(rank==0) {
+        start_t = MPI_Wtime();
+    }
     int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     size -= 1;
@@ -70,6 +84,10 @@ int main(int argc, char **argv) {
     for(i = 0; i < alp_len; i++) {
         MPI_Bcast(P[i], str2_len+1, MPI_INT, 0, MPI_COMM_WORLD);
     }
+    if(rank==0) {
+        end_t = MPI_Wtime();
+        printf("rank=%d: %f seconds for [MPI_Bcast of P]\n", rank, end_t-start_t);
+    }
     //sleep(8);
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank == 0) {
@@ -79,6 +97,7 @@ int main(int argc, char **argv) {
             S[i] = malloc(sizeof(int) * (str2_len + 1));
         }
         int k;
+        start_t = MPI_Wtime();
         for(i = 0; i <= str1_len; i++) {
             for(j = 1; j <= size; j++) {
                 MPI_Recv(s_buf, str2_len+1, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -90,6 +109,8 @@ int main(int argc, char **argv) {
             }
             MPI_Bcast(S[i], str2_len+1, MPI_INT, 0, MPI_COMM_WORLD);
         }
+        end_t = MPI_Wtime();
+        printf("rank=%d: %f seconds for calculation of S\n", rank, end_t-start_t);
         //printf("%s\n", lcs_sequence(S, S[str1_len][str2_len], str1, str1_len, str2, str2_len));
         /*for(i = 0; i <= str1_len; i++) {
             for(j = 0; j <= str2_len; j++) {
