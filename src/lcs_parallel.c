@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
         }
         end_t = MPI_Wtime();
         printf("rank=%d: %f seconds for [calculation of S]\n", rank, end_t-start_t);
-        printf("%d\n", lcs_length(S, str1, str1_len, str2, str2_len));
+        printf("%d\n", S[str1_len][str2_len]);
         //printf("%s\n", lcs_sequence(S, S[str1_len][str2_len], str1, str1_len, str2, str2_len));
         /*int j;
         for(i = 0; i <= str1_len; i++) {
