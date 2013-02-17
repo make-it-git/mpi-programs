@@ -14,7 +14,7 @@ char* lcs_sequence(int **L, int len, char *str1, int str1_len, char *str2, int s
 //void calc_Pij(int **P, int i, int j, char *str2, char *alphabet);
 void calc_Pij(int *P, int i, int j, char *str2, char *alphabet);
 
-void parallel_calc_P();
+void parallel_calc_P(char *str2, int str2_len, char *alphabet, int alphabet_len);
 
 void calc_Sij(int **S, int i, int j, char *str1, int **P, char *alphabet);
 void calc_S_current(int *S_current, int *S_prev, int i, int j, int neg_displacement, char *str1, int **P, char *alphabet);

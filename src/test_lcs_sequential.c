@@ -8,10 +8,10 @@ START_TEST(test_lcs1)
     char *str2 = "nematode knowledge";
     int str1_len = strlen(str1);
     int str2_len = strlen(str2);
-    int **res_matr = malloc(sizeof(void*) * (str1_len + 1));
+    int **res_matr = (int**)malloc(sizeof(void*) * (str1_len + 1));
     int i;
     for(i = 0; i <= str1_len; i++)
-        res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
+        res_matr[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     ck_assert(lcs_len == 7);
     char *seq = lcs_sequence(res_matr, lcs_len, str1, str1_len, str2, str2_len);
@@ -26,10 +26,10 @@ START_TEST(test_lcs2)
     char *str2 = "kgdeila";
     int str1_len = strlen(str1);
     int str2_len = strlen(str2);
-    int **res_matr = malloc(sizeof(void*) * (str1_len + 1));
+    int **res_matr = (int**)malloc(sizeof(void*) * (str1_len + 1));
     int i;
     for(i = 0; i <= str1_len; i++)
-        res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
+        res_matr[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     ck_assert(lcs_len == 3);
     char *seq = lcs_sequence(res_matr, lcs_len, str1, str1_len, str2, str2_len);
@@ -44,10 +44,10 @@ START_TEST(test_lcs3)
     char *str2 = "klakwoz";
     int str1_len = strlen(str1);
     int str2_len = strlen(str2);
-    int **res_matr = malloc(sizeof(void*) * (str1_len + 1));
+    int **res_matr = (int**)malloc(sizeof(void*) * (str1_len + 1));
     int i;
     for(i = 0; i <= str1_len; i++)
-        res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
+        res_matr[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     ck_assert(lcs_len == 4);
     char *seq = lcs_sequence(res_matr, lcs_len, str1, str1_len, str2, str2_len);
@@ -62,10 +62,10 @@ START_TEST(test_no_lcs)
     char *str2 = "lopxcz";
     int str1_len = strlen(str1);
     int str2_len = strlen(str2);
-    int **res_matr = malloc(sizeof(void*) * (str1_len + 1));
+    int **res_matr = (int**)malloc(sizeof(void*) * (str1_len + 1));
     int i;
     for(i = 0; i <= str1_len; i++)
-        res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
+        res_matr[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     ck_assert(lcs_len == 0);
     char *seq = lcs_sequence(res_matr, lcs_len, str1, str1_len, str2, str2_len);

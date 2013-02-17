@@ -16,7 +16,7 @@ int lcs_length(int **L, char *str1, int len1, char *str2, int len2) {
 }
 
 char* lcs_sequence(int **L, int len, char *str1, int str1_len, char *str2, int str2_len) {
-    char *sequence = malloc(sizeof(char) * len + 1);
+    char *sequence = (char*)malloc(sizeof(char) * len + 1);
     int seq_index = len;
     sequence[seq_index] = '\0';
     int i, k;
@@ -81,7 +81,7 @@ void parallel_calc_P(char *str2, int str2_len, char *alphabet, int alphabet_len)
     for(i = 0; i < alphabet_len; i++) {
         if(((i % size) + 1) == rank) {
             //printf("rank = %d calculating P[%d]\n", rank, i);
-            int *P = malloc(sizeof(void*) * (str2_len + 1));
+            int *P = (int*)malloc(sizeof(void*) * (str2_len + 1));
             for(j = 0; j <= str2_len; j++) {
                 calc_Pij(P, i, j, str2, alphabet);
             }
@@ -97,12 +97,12 @@ void parallel_calc_S(int **P, char *alphabet, char *str1, int str1_len, int str2
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     size -= 1; // rank=0 does not work here
     chunk_size = (str2_len + 1) / size;
-    int *S_prev = malloc(sizeof(int) * (str2_len + 1));
+    int *S_prev = (int*)malloc(sizeof(int) * (str2_len + 1));
     int start = (rank-1)*chunk_size;
     int end = rank*chunk_size;
     if(rank == size)
         end = str2_len + 1;
-    int *S_current = malloc(sizeof(int) * (end-start));
+    int *S_current = (int*)malloc(sizeof(int) * (end-start));
     for(i = 0; i <= str1_len; i++) {
         if(i > 0) {
             // get previous row

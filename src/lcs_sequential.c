@@ -4,8 +4,8 @@
 #define BUF_SIZE (1024*1024)
 
 int main(int argc, char **argv) {
-    char *str1 = malloc(sizeof(char) * BUF_SIZE);
-    char *str2 = malloc(sizeof(char) * BUF_SIZE);
+    char *str1 = (char*)malloc(sizeof(char) * BUF_SIZE);
+    char *str2 = (char*)malloc(sizeof(char) * BUF_SIZE);
     int str1_len;
     int str2_len;
     char *c;
@@ -21,10 +21,10 @@ int main(int argc, char **argv) {
     str2_len = strlen(str2);
     fclose(f1);
     fclose(f2);
-    int **res_matr = malloc(sizeof(void*) * (str1_len + 1));
+    int **res_matr = (int**)malloc(sizeof(void*) * (str1_len + 1));
     int i;
     for(i = 0; i <= str1_len; i++)
-        res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
+        res_matr[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     printf("%d\n", lcs_len);
     /*int j;

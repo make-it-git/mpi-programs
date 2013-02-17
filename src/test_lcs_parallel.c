@@ -9,9 +9,9 @@ START_TEST(test_create_P)
     char *alphabet = "ATCG";
     int alp_len = strlen(alphabet);
     int i, j;
-    int **P = malloc(sizeof(void*) * alp_len);
+    int **P = (int**)malloc(sizeof(void*) * alp_len);
     for(i = 0; i < alp_len; i++)
-        P[i] = malloc(sizeof(int) * (str2_len + 1));
+        P[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     for(i = 0; i < alp_len; i++) {
         for(j = 0; j <= str2_len; j++) {
             //calc_Pij(P, i, j, str2, alphabet);
@@ -40,18 +40,18 @@ START_TEST(test_create_S)
     char *alphabet = "ATCG";
     int alp_len = strlen(alphabet);
     int i, j;
-    int **P = malloc(sizeof(void*) * alp_len);
+    int **P = (int**)malloc(sizeof(void*) * alp_len);
     for(i = 0; i < alp_len; i++)
-        P[i] = malloc(sizeof(int) * (str2_len + 1));
+        P[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     for(i = 0; i < alp_len; i++) {
         for(j = 0; j <= str2_len; j++) {
             //calc_Pij(P, i, j, str2, alphabet);
             calc_Pij(P[i], i, j, str2, alphabet);
         }
     }
-    int **S = malloc(sizeof(void*) * (str1_len + 1));
+    int **S = (int**)malloc(sizeof(void*) * (str1_len + 1));
     for(i = 0; i <= str1_len; i++) {
-        S[i] = malloc(sizeof(int) * (str2_len + 1));
+        S[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     }
     for(i = 0; i <= str1_len; i++) {
         for(j = 0; j <= str2_len; j++) {

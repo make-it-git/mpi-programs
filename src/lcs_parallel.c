@@ -9,8 +9,8 @@ int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    char *str1 = malloc(sizeof(char) * BUF_SIZE);
-    char *str2 = malloc(sizeof(char) * BUF_SIZE);
+    char *str1 = (char*)malloc(sizeof(char) * BUF_SIZE);
+    char *str2 = (char*)malloc(sizeof(char) * BUF_SIZE);
     int str1_len;
     int str2_len;
     char *alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -50,10 +50,10 @@ int main(int argc, char **argv) {
     int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     size -= 1;
-    int **P = malloc(sizeof(void*) * alp_len);
+    int **P = (int**)malloc(sizeof(void*) * alp_len);
     int i;
     for(i = 0; i < alp_len; i++)
-        P[i] = malloc(sizeof(int) * (str2_len + 1));
+        P[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     if(rank > 0) {
         parallel_calc_P(str2, str2_len, alphabet, alp_len);
     } else { //rank=0
@@ -81,9 +81,9 @@ int main(int argc, char **argv) {
     }
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank == 0) {
-        int **S = malloc(sizeof(void*) * (str1_len + 1));
-        int *rcvcounts = malloc(sizeof(int) * size+1);
-        int *displs = malloc(sizeof(int) * size+1);
+        int **S = (int**)malloc(sizeof(void*) * (str1_len + 1));
+        int *rcvcounts = (int*)malloc(sizeof(int) * size+1);
+        int *displs = (int*)malloc(sizeof(int) * size+1);
         int chunk_size = (str2_len + 1) / size;
         int start;
         int end;
@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
             //printf("rcvcounts[%d]=%d,\tdispls[%d]=%d, end=%d\n", i, rcvcounts[i], i, displs[i], end);
         }
         for(i = 0; i <= str1_len; i++) {
-            S[i] = malloc(sizeof(int) * (str2_len + 1));
+            S[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
         }
         start_t = MPI_Wtime();
         for(i = 0; i <= str1_len; i++) {
