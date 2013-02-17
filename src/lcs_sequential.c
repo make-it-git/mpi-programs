@@ -27,8 +27,14 @@ int main(int argc, char **argv) {
         res_matr[i] = malloc(sizeof(int) * (str2_len + 1));
     int lcs_len = lcs_length(res_matr, str1, str1_len, str2, str2_len);
     printf("%d\n", lcs_len);
+    /*int j;
+    for(i = 0; i <= str1_len; i++) {
+        for(j = 0; j <= str2_len; j++) {
+            printf("%d  ", res_matr[i][j]);
+        }
+        printf("\n");
+    }*/
     char *seq = lcs_sequence(res_matr, lcs_len, str1, str1_len, str2, str2_len);
-    printf("%d\n", lcs_len);
     free(seq);
     for(i = 0; i <= str1_len; i++)
         free(res_matr[i]);
