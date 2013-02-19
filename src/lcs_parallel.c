@@ -63,20 +63,9 @@ int main(int argc, char **argv) {
     if(rank > 0) {
         parallel_calc_P(str2, str2_len, alphabet, alp_len);
     } else { //rank=0
-        //printf("rank = %d\n", rank);
         for(i = 0; i < alp_len; i++) {
             MPI_Recv(P[i], str2_len+1, MPI_INT, (i % size) + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
-        /*int j;
-        for(i = 0; i < alp_len; i++) {
-            for(j = 0; j <= str2_len; j++) {
-                printf("%d\t", P[i][j]);
-            }
-            printf("\n");
-        }
-        for(i = 0; i < alp_len; i++)
-            free(P[i]);
-        free(P);*/
     }
     for(i = 0; i < alp_len; i++) {
         MPI_Bcast(P[i], str2_len+1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -102,7 +91,6 @@ int main(int argc, char **argv) {
                 end = str2_len + 1;
             rcvcounts[i] = end - start;
             displs[i] = start;
-            //printf("rcvcounts[%d]=%d,\tdispls[%d]=%d, end=%d\n", i, rcvcounts[i], i, displs[i], end);
         }
         for(i = 0; i <= str1_len; i++) {
             S[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
@@ -117,13 +105,6 @@ int main(int argc, char **argv) {
         printf("rank=%d: %f seconds for [calculation of S]\n", rank, end_t-start_t);
         fprintf(f3, "lcs length = %d\n", S[str1_len][str2_len]);
         fprintf(f3, "%s\n", lcs_sequence(S, S[str1_len][str2_len], str1, str1_len, str2, str2_len));
-        /*int j;
-        for(i = 0; i <= str1_len; i++) {
-            for(j = 0; j <= str2_len; j++) {
-                printf("%d  ", S[i][j]);
-            }
-            printf("\n");
-        }*/
         for(i = 0; i <= str1_len; i++) {
             free(S[i]);
         }

@@ -34,7 +34,6 @@ char* lcs_sequence(int **L, int len, char *str1, int str1_len, char *str2, int s
     return sequence;
 }
 
-//inline void calc_Pij(int **P, int i, int j, char *str2, char *alphabet) {
 inline void calc_Pij(int *P, int i, int j, char *str2, char *alphabet) {
     if(j == 0) {
         P[j] = 0;
@@ -77,10 +76,8 @@ void parallel_calc_P(char *str2, int str2_len, char *alphabet, int alphabet_len)
     int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     size -= 1; // rank=0 does not work here
-    //int **P = malloc(sizeof(void*) * alphabet_len);
     for(i = 0; i < alphabet_len; i++) {
         if(((i % size) + 1) == rank) {
-            //printf("rank = %d calculating P[%d]\n", rank, i);
             int *P = (int*)malloc(sizeof(void*) * (str2_len + 1));
             for(j = 0; j <= str2_len; j++) {
                 calc_Pij(P, i, j, str2, alphabet);
@@ -108,15 +105,9 @@ void parallel_calc_S(int **P, char *alphabet, char *str1, int str1_len, int str2
             // get previous row
             MPI_Bcast(S_prev, str2_len+1, MPI_INT, 0, MPI_COMM_WORLD);
         }
-        //if(i == 0)
-        //    printf("rank=%d, start=%d, end=%d, strlen=%d\n", rank, start, end, str2_len);
         for(j = start; j < end; j++) {
-            //if(((j % size) + 1) == rank) {
-                //printf("parallel_cals_S: rank=%d calculating S[%d][%d]\n", rank, i, j);
-                calc_S_current(S_current, S_prev, i, j, (rank-1)*chunk_size, str1, P, alphabet);
-            //}
+            calc_S_current(S_current, S_prev, i, j, (rank-1)*chunk_size, str1, P, alphabet);
         }
-        //MPI_Send(S_current, end-start, MPI_INT, 0, 0, MPI_COMM_WORLD);
         MPI_Gatherv(S_current, end-start, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, MPI_COMM_WORLD);
     }
     free(S_current);

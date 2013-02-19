@@ -14,7 +14,6 @@ START_TEST(test_create_P)
         P[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     for(i = 0; i < alp_len; i++) {
         for(j = 0; j <= str2_len; j++) {
-            //calc_Pij(P, i, j, str2, alphabet);
             calc_Pij(P[i], i, j, str2, alphabet);
         }
     }
@@ -45,7 +44,6 @@ START_TEST(test_create_S)
         P[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
     for(i = 0; i < alp_len; i++) {
         for(j = 0; j <= str2_len; j++) {
-            //calc_Pij(P, i, j, str2, alphabet);
             calc_Pij(P[i], i, j, str2, alphabet);
         }
     }
