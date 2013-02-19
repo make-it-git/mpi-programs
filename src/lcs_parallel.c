@@ -5,6 +5,10 @@
 #define BUF_SIZE (1024*1024)
 
 int main(int argc, char **argv) {
+    if(argc != 4) {
+        fprintf(stderr, "Usage: %s str1_file str2_file out_file\n", argv[0]);
+        return 1;
+    }
     double start_t, end_t;
     MPI_Init(&argc, &argv);
     int rank;
@@ -15,11 +19,13 @@ int main(int argc, char **argv) {
     int str2_len;
     char *alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     int alp_len = strlen(alphabet);
+    FILE *f3;
     if(rank == 0) {
         start_t = MPI_Wtime();
         char *c;
         FILE *f1 = fopen(argv[1], "rb");
         FILE *f2 = fopen(argv[2], "rb");
+        f3 = fopen(argv[3], "wb");
         fgets(str1, BUF_SIZE, f1);
         fgets(str2, BUF_SIZE, f2);
         c = strchr(str1, '\n');
@@ -109,8 +115,8 @@ int main(int argc, char **argv) {
         }
         end_t = MPI_Wtime();
         printf("rank=%d: %f seconds for [calculation of S]\n", rank, end_t-start_t);
-        printf("%d\n", S[str1_len][str2_len]);
-        //printf("%s\n", lcs_sequence(S, S[str1_len][str2_len], str1, str1_len, str2, str2_len));
+        fprintf(f3, "lcs length = %d\n", S[str1_len][str2_len]);
+        fprintf(f3, "%s\n", lcs_sequence(S, S[str1_len][str2_len], str1, str1_len, str2, str2_len));
         /*int j;
         for(i = 0; i <= str1_len; i++) {
             for(j = 0; j <= str2_len; j++) {
@@ -124,6 +130,7 @@ int main(int argc, char **argv) {
         free(S);
         free(rcvcounts);
         free(displs);
+        fclose(f3);
     } else { //rank>0
         parallel_calc_S(P, alphabet, str1, str1_len, str2_len);
     }
