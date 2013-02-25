@@ -7,17 +7,13 @@ START_TEST(test_matrix_create)
     int **B = NULL;
     int N = 4;
 
-    //matrix_create_d(&A, N);
     matrix_create((void***)&A, N, sizeof(double));
     ck_assert(A != NULL);
-    //matrix_free_d(&A, N);
     matrix_free((void***)&A, N);
     ck_assert(A == NULL);
 
-    //matrix_create_i(&B, N);
     matrix_create((void***)&B, N, sizeof(double));
     ck_assert(B != NULL);
-    //matrix_free_i(&B, N);
     matrix_free((void***)&B, N);
     ck_assert(B == NULL);
 END_TEST
@@ -25,7 +21,6 @@ END_TEST
 START_TEST(test_matrix_create_identity_matrix)
     int **A = NULL;
     int N = 4;
-    //matrix_create_i(&A, N);
     matrix_create((void***)&A, N, sizeof(int));
     matrix_make_identity_matrix(A, N);
     int expected[][4] = {
@@ -38,14 +33,11 @@ START_TEST(test_matrix_create_identity_matrix)
     for(i = 0; i < N; i++) {
         ck_assert(memcmp(A[i], expected[i], N*sizeof(int)) == 0);
     }
-    //matrix_free_i(&A, N);
     matrix_free((void***)&A, N);
 END_TEST
 
 START_TEST(test_find_pivot)
-    //double **A = NULL;
     int N = 4;
-    //matrix_create_d(&A, N);
     double tmp[][4] = {
         {10.0, 20.0, 1.1, 20.1},
         {8.5,  4.3,  3.3, 0.5},
@@ -53,12 +45,6 @@ START_TEST(test_find_pivot)
         {9.3,  18.9,  3.9, 5.0}
     };
     double *A[] = {tmp[0], tmp[1], tmp[2], tmp[3]};
-    /*int i, k;
-    for(i = 0; i < N; i++) {
-        for(k = 0; k < N; k++) {
-            A[i][k] = tmp[i][k];
-        }
-    }*/
     double delta = 1E-8;
     double pivot_value;
     int pivot_row;
@@ -79,14 +65,12 @@ START_TEST(test_find_pivot)
     ck_assert_int_eq(pivot_row, 3);
     ck_assert(fabs(pivot_value - A[pivot_row][3]) < delta);
 
-    //matrix_free_d(&A, N);
 END_TEST
 
 START_TEST(test_swap_rows)
     double **A = NULL;
     double reference[4][4];
     int N = 4;
-    //matrix_create_d(&A, N);
     matrix_create((void***)&A, N, sizeof(double));
     int i, k;
     for(i = 0; i < N; i++) {
@@ -103,7 +87,6 @@ START_TEST(test_swap_rows)
     ck_assert((memcmp(A[2], reference[3], sizeof(double) * N)) == 0);
     LUP_swap_rows((void**)A, 2, 3);
     ck_assert((memcmp(A[2], reference[2], sizeof(double) * N)) == 0);
-    //matrix_free_d(&A, N);
     matrix_free((void***)&A, N);
 END_TEST
 
@@ -161,11 +144,9 @@ START_TEST(test_C_to_LU)
     double delta = 1E-3;
     for(i = 0; i < N; i++) {
         for(k = 0; k < N; k++) {
-            //printf("%.3f-%.3f=%.3f\t", L[i][k], expected_L[i][k], fabs(L[i][k]-expected_L[i][k]));
             ck_assert(fabs(L[i][k] - expected_L[i][k]) < delta);
             ck_assert(fabs(U[i][k] - expected_U[i][k]) < delta);
         }
-        //printf("\n");
     }
     matrix_free((void***)&A, N);
     matrix_free((void***)&C, N);

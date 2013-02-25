@@ -8,9 +8,6 @@ int main(int argc, char **argv) {
     double **A;
     double **C;
     int **P;
-    /*matrix_create_d(&A, N);
-    matrix_create_d(&C, N);
-    matrix_create_i(&P, N);*/
     matrix_create((void***)&A, N, sizeof(double));
     matrix_create((void***)&C, N, sizeof(double));
     matrix_create((void***)&P, N, sizeof(int));
@@ -60,9 +57,6 @@ int main(int argc, char **argv) {
         printf("\n");
     }
 
-    /*matrix_free_i(&P, N);
-    matrix_free_d(&C, N);
-    matrix_free_d(&A, N);*/
     matrix_free((void***)&P, N);
     matrix_free((void***)&C, N);
     matrix_free((void***)&A, N);
