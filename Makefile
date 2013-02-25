@@ -1,7 +1,7 @@
 CC=mpicc
 CFLAGS=-Wall -Wextra
 
-all: bin/lcs_sequential bin/test_lcs_sequential bin/test_lcs_parallel bin/lcs_parallel bin/lcs_generate_strings bin/test_lup_functions bin/lup_sequential
+all: bin/lcs_sequential bin/test_lcs_sequential bin/test_lcs_parallel bin/lcs_parallel bin/lcs_generate_strings bin/test_lup_functions bin/lup_sequential bin/lup_generate_matrix
 
 obj/lcs_functions.o: src/lcs_functions.c src/lcs_functions.h
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -32,6 +32,9 @@ bin/test_lup_functions: src/test_lup_functions.c obj/lup_functions.o
 
 bin/lup_sequential: src/lup_sequential.c obj/lup_functions.o
 	$(CC) $(CFLAGS) -o $@ src/lup_sequential.c obj/lup_functions.o
+
+bin/lup_generate_matrix: src/lup_generate_matrix.c
+	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
 	rm -f obj/*.o bin/*
