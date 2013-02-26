@@ -20,10 +20,15 @@ int main(int argc, char **argv) {
     }
     double *A = NULL;
     double *C = NULL;
+    int *P = NULL; //identity matrix
     int i;
     if(rank == 0) { //read matrix A from file
         LUP_mpi_matrix_create(&A, N);
         LUP_mpi_matrix_create(&C, N);//matrix C will contain result
+        P = (int*)malloc(sizeof(int) * N);
+        for(i = 0; i < N; i++) {
+            P[i] = i;
+        }
         FILE *f;
         f = fopen(filename, "rb");
         if(!f) {
@@ -47,9 +52,7 @@ int main(int argc, char **argv) {
     int rows_per_process = N / (size - 1); //(size-1), because rank=0 does not work here
     int rows_per_last_process = N - (size - 2) * rows_per_process;
     int rp = (rank == size - 1) ? rows_per_last_process : rows_per_process;
-    /*if(rank == size-1) {
-        rows_per_process = N - (size-2)*rows_per_process;
-    }*/
+
     double *rows = NULL; //buffer for rows at every process with rank > 0
     if(rank > 0) {
         //int rp = (rank == size - 1) ? rows_per_last_process : rows_per_process;
@@ -72,10 +75,9 @@ int main(int argc, char **argv) {
         free(sendcounts);
         free(displs);
     } else {
-        //int rp = (rank == size - 1) ? rows_per_last_process : rows_per_process;
         MPI_Scatterv(NULL, NULL, NULL, MPI_DOUBLE, rows, rp*N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
-    if(rank > 0) {
+    /*if(rank > 0) {
         sleep(rank);
         printf("rank=%d:\n", rank);
         //int rp = (rank == size - 1) ? rows_per_last_process : rows_per_process;
@@ -86,14 +88,65 @@ int main(int argc, char **argv) {
             }
             printf("\n");
         }
-    }
+    }*/
     /*if(rank > 0) {
         //int rp = (rank == size - 1) ? rows_per_last_process : rows_per_process;
         printf("rank=%d, rows=%d\n", rank, rp);
     }*/
+
+    //find pivot element
+    double pivot_value;
+    int pivot_row;
+    double *pivot_values = NULL;
+    int *pivot_rows = NULL;
+    if(rank == 0) {
+        pivot_values = (double*)malloc(sizeof(double) * size);
+        pivot_rows = (int*)malloc(sizeof(int) * size);
+    }
+    int first_row;
+    int last_row;
+    int proc;
+    double proc_max_value = 0;
+    int proc_max_row = -1;
+    for(i = 0; i < N; i++) {
+        if(rank > 0) {
+            if(rank == size - 1) last_row = N-1;
+            else last_row = rank*rows_per_process - 1;
+            first_row = (rank-1)*rows_per_process;
+            if(LUP_mpi_find_pivot(rows, first_row, last_row, i, N, &pivot_value, &pivot_row, rp) == 0) {
+                if(fabs(pivot_value) < 1E-6) {
+                    fprintf(stderr, "Matrix is singular\n");
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+            }
+            MPI_Gather(&pivot_value, 1, MPI_DOUBLE, NULL, 0, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Gather(&pivot_row, 1, MPI_INT, NULL, 0, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+        if(rank == 0) {
+            MPI_Gather(pivot_values, 1, MPI_DOUBLE, pivot_values, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Gather(pivot_rows, 1, MPI_INT, pivot_rows, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            proc_max_value = 0;
+            proc_max_row = -1;
+            int proc_last_row;
+            for(proc = 1; proc < size; proc++) {
+                if(proc == size - 1) proc_last_row = N-1;
+                else proc_last_row = proc*rows_per_process - 1;
+                if(i <= proc_last_row) {
+                    if(pivot_values[proc] > proc_max_value) {
+                        proc_max_value = pivot_values[proc];
+                        proc_max_row = pivot_rows[proc];
+                    }
+                }
+            }
+            //printf("i=%d, max_value=%f, max_row=%d\n", i, proc_max_value, proc_max_row);
+        }
+    }
     if(rank == 0) {
         LUP_mpi_matrix_free(&A);
         LUP_mpi_matrix_free(&C);
+        free(P);
+        free(pivot_values);
+        free(pivot_rows);
     }
     if(rank > 0) {
         free(rows);

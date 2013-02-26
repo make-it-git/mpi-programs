@@ -19,5 +19,6 @@ void LUP_C_to_LU(double **C, double **L, double **U, int N);
 
 void LUP_mpi_matrix_create(double **A, int N);
 void LUP_mpi_matrix_free(double **A);
+int LUP_mpi_find_pivot(double *C, int first_row, int last_row, int current_row, int row_length, double *pivot_value, int *pivot_row, int rows_per_proc);
 
 #endif

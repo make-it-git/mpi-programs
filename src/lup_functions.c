@@ -88,3 +88,31 @@ void LUP_mpi_matrix_free(double **A) {
     free(*A);
     *A = NULL;
 }
+
+int LUP_mpi_find_pivot(double *C, int first_row, int last_row, int current_row, int row_length, double *pivot_value, int *pivot_row, int rows_per_proc) {
+    double l_pivot_value = 0;
+    int l_pivot_row = -1;
+    int row;
+    int column = current_row;
+    int orig_last_row, orig_first_row;
+    orig_first_row = first_row;
+    orig_last_row = last_row;
+    if(current_row <= last_row) {
+        last_row = last_row - first_row;
+        if(current_row >= first_row)
+            first_row = current_row - first_row;
+        else
+            first_row = 0;
+        for(row = first_row; row <= last_row; row++) {
+            if (fabs(C[row_length*row + column]) > l_pivot_value) {
+                l_pivot_value = fabs(C[row_length*row + column]);
+                l_pivot_row = orig_first_row + row; //original row number
+            }
+        }
+    } else {
+        return 1;
+    }
+    *pivot_value = l_pivot_value;
+    *pivot_row = l_pivot_row;
+    return 0;
+}
