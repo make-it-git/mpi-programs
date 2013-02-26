@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <mpi.h>
 
 void matrix_copy(double **src, double **dst, int N);
 
@@ -15,5 +16,8 @@ void matrix_make_identity_matrix(int **A, int N);
 void LUP_find_pivot(double **C, int N, int current_row, double *pivot_value, int *pivot_row);
 void LUP_swap_rows(void **P, int row1, int row2);
 void LUP_C_to_LU(double **C, double **L, double **U, int N);
+
+void LUP_mpi_matrix_create(double **A, int N);
+void LUP_mpi_matrix_free(double **A);
 
 #endif

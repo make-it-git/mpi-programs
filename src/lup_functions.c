@@ -79,3 +79,12 @@ void LUP_C_to_LU(double **C, double **L, double **U, int N) {
         }
     }
 }
+
+void LUP_mpi_matrix_create(double **A, int N) {
+    *A = (double*)malloc(sizeof(double) * N * N);
+}
+
+void LUP_mpi_matrix_free(double **A) {
+    free(*A);
+    *A = NULL;
+}
