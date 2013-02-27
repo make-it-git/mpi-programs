@@ -108,12 +108,13 @@ int main(int argc, char **argv) {
     int proc;
     double proc_max_value = 0;
     int proc_max_row = -1;
+    double Cii;
     for(i = 0; i < N; i++) {
         if(rank > 0) {
             if(rank == size - 1) last_row = N-1;
             else last_row = rank*rows_per_process - 1;
             first_row = (rank-1)*rows_per_process;
-            if(LUP_mpi_find_pivot(rows, first_row, last_row, i, N, &pivot_value, &pivot_row, rp) == 0) {
+            if(LUP_mpi_find_pivot(rows, first_row, last_row, i, N, &pivot_value, &pivot_row) == 0) {
                 if(fabs(pivot_value) < 1E-6) {
                     fprintf(stderr, "Matrix is singular\n");
                     MPI_Abort(MPI_COMM_WORLD, 1);
@@ -121,6 +122,33 @@ int main(int argc, char **argv) {
             }
             MPI_Gather(&pivot_value, 1, MPI_DOUBLE, NULL, 0, MPI_DOUBLE, 0, MPI_COMM_WORLD);
             MPI_Gather(&pivot_row, 1, MPI_INT, NULL, 0, MPI_INT, 0, MPI_COMM_WORLD);
+            int i_row, max_row;
+            int i_proc, max_proc;
+            if(i >= first_row && i <= last_row) {
+                MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            }
+            MPI_Bcast(&i_row, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&max_row, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&i_proc, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&max_proc, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            //printf("...\n");
+            if(i_row >= first_row && i_row <= last_row && max_row >= first_row && max_row <= last_row) {//both rows are in the same process
+                //printf("%d\n", rank);
+                //sleep(8);
+                LUP_mpi_swap_rows(rows, i_row, max_row, first_row, N);
+            } else if(i_row >= first_row && i_row <= last_row) {
+                //printf("rank=%d, sending to max_proc=%d, i_proc=%d\n", rank, max_proc, i_proc);
+                MPI_Sendrecv_replace(rows + i_row, N, MPI_DOUBLE, max_proc, 0, max_proc, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            } else if(max_row >= first_row && max_row <= last_row) {
+                //printf("rank=%d, sending to i_proc=%d, max_proc=%d\n", rank, i_proc, max_proc);
+                MPI_Sendrecv_replace(rows + max_row, N, MPI_DOUBLE, i_proc, 0, i_proc, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
+            //spread C[i][i] across processes
+            if(i >= first_row && i <=last_row) {
+                MPI_Bcast(rows + (i - first_row)*N + i, 1, MPI_DOUBLE, rank, MPI_COMM_WORLD); 
+            } else {
+                MPI_Bcast(&Cii, 1, MPI_DOUBLE, i_proc, MPI_COMM_WORLD);
+            }
         }
         if(rank == 0) {
             MPI_Gather(pivot_values, 1, MPI_DOUBLE, pivot_values, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -128,6 +156,7 @@ int main(int argc, char **argv) {
             proc_max_value = 0;
             proc_max_row = -1;
             int proc_last_row;
+            int max_proc = -1;
             for(proc = 1; proc < size; proc++) {
                 if(proc == size - 1) proc_last_row = N-1;
                 else proc_last_row = proc*rows_per_process - 1;
@@ -135,12 +164,65 @@ int main(int argc, char **argv) {
                     if(pivot_values[proc] > proc_max_value) {
                         proc_max_value = pivot_values[proc];
                         proc_max_row = pivot_rows[proc];
+                        max_proc = proc;
                     }
                 }
             }
+            //swap rows in P
+            int tmp;
+            tmp = P[proc_max_row];
+            P[proc_max_row] = P[i];
+            P[i] = tmp;
+            int i_proc;
+            MPI_Recv(&i_proc, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            //swap rows in C (swap row i with row proc_max_row, proc_max_row is in process max_proc)
+            MPI_Bcast(&i, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&proc_max_row, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&i_proc, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&max_proc, 1, MPI_INT, 0, MPI_COMM_WORLD);
             //printf("i=%d, max_value=%f, max_row=%d\n", i, proc_max_value, proc_max_row);
-        }
+            double dtmp;//not used, just to receive broadcasted C[i][i]
+            MPI_Bcast(&dtmp, 1, MPI_DOUBLE, i_proc, MPI_COMM_WORLD);
+            //printf("C[%d][%d]=%f\n", i, i, dtmp);
+        }//pivot row found
+        
+        //int j, k;
+        /*for(j = i+1; j < N; j++) {
+            C[j][i] /= C[i][i];
+            for(k = i+1; k < N; k++) {
+                C[j][k] -= C[j][i] * C[i][k];
+            }
+        }*/
+        
     }
+    if(rank == 0) {
+        int *recvcounts = (int*)malloc(sizeof(int) * size);
+        int *displs = (int*)malloc(sizeof(int) * size);
+        recvcounts[0] = displs[0] = 0;//rank=0 does not send anything (and does not receive, too)
+        for(i = 1; i < size; i++) {
+            if(i == size-1) {
+                recvcounts[i] = rows_per_last_process * N;
+            } else {
+                recvcounts[i] = rows_per_process * N;
+            }
+            displs[i] = (i-1) * recvcounts[i-1];
+        }
+        MPI_Gatherv(C, 0, MPI_DOUBLE, C, recvcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        free(recvcounts);
+        free(displs);
+        /*int k;
+        for(i = 0; i < N; i++) {
+            for(k = 0; k < N; k++) {
+                printf("%f\t", C[i*N + k]);
+            }
+            printf("\n");
+        }*/
+    }
+    if(rank > 0) {
+        //sleep(9);
+        MPI_Gatherv(rows, N*rp, MPI_DOUBLE, NULL, NULL, NULL, MPI_DOUBLE, 0, MPI_COMM_WORLD);    
+    }
+
     if(rank == 0) {
         LUP_mpi_matrix_free(&A);
         LUP_mpi_matrix_free(&C);

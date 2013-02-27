@@ -89,14 +89,15 @@ void LUP_mpi_matrix_free(double **A) {
     *A = NULL;
 }
 
-int LUP_mpi_find_pivot(double *C, int first_row, int last_row, int current_row, int row_length, double *pivot_value, int *pivot_row, int rows_per_proc) {
+int LUP_mpi_find_pivot(double *C, int first_row, int last_row, int current_row, int row_length, double *pivot_value, int *pivot_row) {
     double l_pivot_value = 0;
     int l_pivot_row = -1;
     int row;
     int column = current_row;
-    int orig_last_row, orig_first_row;
+    //int orig_last_row;
+    int orig_first_row;
     orig_first_row = first_row;
-    orig_last_row = last_row;
+    //orig_last_row = last_row;
     if(current_row <= last_row) {
         last_row = last_row - first_row;
         if(current_row >= first_row)
@@ -115,4 +116,20 @@ int LUP_mpi_find_pivot(double *C, int first_row, int last_row, int current_row, 
     *pivot_value = l_pivot_value;
     *pivot_row = l_pivot_row;
     return 0;
+}
+
+void LUP_mpi_swap_rows(double *C, int row1, int row2, int first_row, int N) {
+    if(row1 == row2)
+        return;
+    int i;
+    double tmp;
+    int r1N, r2N;
+    row1 = row1 - first_row;
+    row2 = row2 - first_row;
+    for(i = 0; i < N; i++) {
+        r1N = row1*N; r2N = row2*N;
+        tmp = C[r1N + i];
+        C[r1N + i] = C[r2N + i];
+        C[r2N + i] = tmp;
+    }
 }
