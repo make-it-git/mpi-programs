@@ -109,21 +109,26 @@ int main(int argc, char **argv) {
     double proc_max_value = 0;
     int proc_max_row = -1;
     double Cii;
+    double *prev_row = NULL;
+    if(rank >= 1) {
+        prev_row = (double*)malloc(sizeof(double) * N);
+    }
+    int i_row, max_row;
+    int i_proc, max_proc;
     for(i = 0; i < N; i++) {
         if(rank > 0) {
             if(rank == size - 1) last_row = N-1;
             else last_row = rank*rows_per_process - 1;
             first_row = (rank-1)*rows_per_process;
-            if(LUP_mpi_find_pivot(rows, first_row, last_row, i, N, &pivot_value, &pivot_row) == 0) {
-                if(fabs(pivot_value) < 1E-6) {
-                    fprintf(stderr, "Matrix is singular\n");
-                    MPI_Abort(MPI_COMM_WORLD, 1);
-                }
-            }
+            LUP_mpi_find_pivot(rows, first_row, last_row, i, N, &pivot_value, &pivot_row);
+            //if(LUP_mpi_find_pivot(rows, first_row, last_row, i, N, &pivot_value, &pivot_row) == 0) {
+            //    if(fabs(pivot_value) < 1E-6) {
+            //        fprintf(stderr, "Matrix is singular\n");
+            //        MPI_Abort(MPI_COMM_WORLD, 1);
+            //    }
+            //}
             MPI_Gather(&pivot_value, 1, MPI_DOUBLE, NULL, 0, MPI_DOUBLE, 0, MPI_COMM_WORLD);
             MPI_Gather(&pivot_row, 1, MPI_INT, NULL, 0, MPI_INT, 0, MPI_COMM_WORLD);
-            int i_row, max_row;
-            int i_proc, max_proc;
             if(i >= first_row && i <= last_row) {
                 MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
             }
@@ -146,6 +151,7 @@ int main(int argc, char **argv) {
             //spread C[i][i] across processes
             if(i >= first_row && i <=last_row) {
                 MPI_Bcast(rows + (i - first_row)*N + i, 1, MPI_DOUBLE, rank, MPI_COMM_WORLD); 
+                Cii = rows[(i-first_row)*N + i];
             } else {
                 MPI_Bcast(&Cii, 1, MPI_DOUBLE, i_proc, MPI_COMM_WORLD);
             }
@@ -169,10 +175,22 @@ int main(int argc, char **argv) {
                 }
             }
             //swap rows in P
-            int tmp;
-            tmp = P[proc_max_row];
-            P[proc_max_row] = P[i];
-            P[i] = tmp;
+            //if(i == 3)
+            //    sleep(10);
+            int tmp_i, tmp_r1, tmp_r2;
+            for(tmp_i = 0; tmp_i < N; tmp_i++) {
+                if(P[tmp_i] == proc_max_row)
+                    tmp_r1 = tmp_i;
+                if(P[tmp_i] == i)
+                    tmp_r2 = tmp_i;
+            }
+            int tmp = P[tmp_r1];
+            P[tmp_r1] = P[tmp_r2];
+            P[tmp_r2] = tmp;
+            //tmp = P[proc_max_row];
+            //P[proc_max_row] = P[i];
+            //P[i] = tmp;
+            //printf("%d %d %d %d %d, SWAP %d %d\n", i, P[0], P[1], P[2], P[3], proc_max_row, i);
             int i_proc;
             MPI_Recv(&i_proc, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             //swap rows in C (swap row i with row proc_max_row, proc_max_row is in process max_proc)
@@ -181,18 +199,42 @@ int main(int argc, char **argv) {
             MPI_Bcast(&i_proc, 1, MPI_INT, 0, MPI_COMM_WORLD);
             MPI_Bcast(&max_proc, 1, MPI_INT, 0, MPI_COMM_WORLD);
             //printf("i=%d, max_value=%f, max_row=%d\n", i, proc_max_value, proc_max_row);
+            //printf("C[%d][%d]=%f\n", i, i, dtmp);
             double dtmp;//not used, just to receive broadcasted C[i][i]
             MPI_Bcast(&dtmp, 1, MPI_DOUBLE, i_proc, MPI_COMM_WORLD);
-            //printf("C[%d][%d]=%f\n", i, i, dtmp);
         }//pivot row found
         
-        //int j, k;
-        /*for(j = i+1; j < N; j++) {
-            C[j][i] /= C[i][i];
-            for(k = i+1; k < N; k++) {
-                C[j][k] -= C[j][i] * C[i][k];
+        if(rank > 0) {
+            if(rank == size - 1) last_row = N-1;
+            else last_row = rank*rows_per_process - 1;
+            first_row = (rank-1)*rows_per_process;
+            int j, k;
+            int start, end;
+            //if(i == 0)
+            //    sleep(10);
+            if(i == last_row && rank < size-1) {
+                MPI_Send(rows + (i-first_row)*N, N, MPI_DOUBLE, rank+1, 0, MPI_COMM_WORLD);
+            } else if((i+1) == first_row) {
+                MPI_Recv(prev_row, N, MPI_DOUBLE, rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
-        }*/
+            if((i+1) >= first_row && (i+1) <= last_row) {
+                start = i+1;
+                end = last_row - first_row;
+                start = start - first_row;
+                for(j = start; j <= end; j++) {
+                    //if(j >= first_row && j <= last_row) {
+                        rows[j*N + i] /= Cii;
+                        for(k = i+1; k < N; k++) {
+                            //rows[j*N + k] -= rows[j*N + i] * rows[i*N + k];;
+                            if(i+1 == first_row)
+                                rows[j*N + k] -= rows[j*N + i] * prev_row[k];
+                            else
+                                rows[j*N + k] -= rows[j*N + i] * rows[(i-first_row)*N + k];
+                        }
+                    //}
+                }
+            }
+        }
         
     }
     if(rank == 0) {
@@ -210,17 +252,34 @@ int main(int argc, char **argv) {
         MPI_Gatherv(C, 0, MPI_DOUBLE, C, recvcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         free(recvcounts);
         free(displs);
-        /*int k;
+        int k;
+        printf("C\n");
         for(i = 0; i < N; i++) {
             for(k = 0; k < N; k++) {
                 printf("%f\t", C[i*N + k]);
             }
             printf("\n");
-        }*/
+        }
+        printf("P\n");
+        for(i = 0; i < N; i++) {
+            for(k = 0; k < N; k++) {
+                if(i == P[k]) {
+                    printf("1\t");
+                } else {
+                    printf("0\t");
+                }
+            }
+            printf("\n");
+        }
     }
     if(rank > 0) {
         //sleep(9);
         MPI_Gatherv(rows, N*rp, MPI_DOUBLE, NULL, NULL, NULL, MPI_DOUBLE, 0, MPI_COMM_WORLD);    
+    }
+
+    sleep(10);
+    if(rank >= 1) {
+        free(prev_row);
     }
 
     if(rank == 0) {
@@ -231,7 +290,7 @@ int main(int argc, char **argv) {
         free(pivot_rows);
     }
     if(rank > 0) {
-        free(rows);
+        //free(rows);
         rows = NULL;
     }
     MPI_Barrier(MPI_COMM_WORLD);
