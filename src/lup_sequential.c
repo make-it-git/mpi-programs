@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 
     double pivot_value;
     int pivot_row;
-    for(i = 0; i < N; i++) {
+    for(i = 0; i < N-1; i++) {
         LUP_find_pivot(C, N, i, &pivot_value, &pivot_row);
         if(pivot_value == 0) {
             fprintf(stderr, "Matrix is singular\n");
