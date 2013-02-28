@@ -8,6 +8,14 @@ int main(int argc, char **argv) {
         fprintf(stderr, "\tN denotes matrix size\n");
         return 1;
     }
+    double t_swap_rows_in_P = 0;
+    double t_scatter_data = 0;
+    double t_swap_rows_in_the_same_process = 0;
+    double t_swap_rows_in_different_processes = 0;
+    double t_start;
+    double t_start_data_out = 0;
+    double t_end_data_out = 0;
+    double t_calcs = 0;
     char *filename = argv[1];
     int N = atoi(argv[2]);
     MPI_Init(&argc, &argv);
@@ -22,6 +30,7 @@ int main(int argc, char **argv) {
     double *C = NULL;
     int *P = NULL; //identity matrix
     int i;
+    t_start = MPI_Wtime();
     if(rank == 0) { //read matrix A from file
         LUP_mpi_matrix_create(&A, N);
         LUP_mpi_matrix_create(&C, N);//matrix C will contain result
@@ -93,6 +102,7 @@ int main(int argc, char **argv) {
         //int rp = (rank == size - 1) ? rows_per_last_process : rows_per_process;
         printf("rank=%d, rows=%d\n", rank, rp);
     }*/
+    t_scatter_data = MPI_Wtime();
 
     //find pivot element
     double pivot_value;
@@ -140,11 +150,17 @@ int main(int argc, char **argv) {
             if(i_row >= first_row && i_row <= last_row && max_row >= first_row && max_row <= last_row) {//both rows are in the same process
                 //printf("%d\n", rank);
                 //sleep(8);
+                t_swap_rows_in_the_same_process += MPI_Wtime() - t_swap_rows_in_the_same_process;
                 LUP_mpi_swap_rows(rows, i_row, max_row, first_row, N);
+                t_swap_rows_in_the_same_process += MPI_Wtime() - t_swap_rows_in_the_same_process;
             } else if(i_row >= first_row && i_row <= last_row) {
+                t_swap_rows_in_different_processes += MPI_Wtime() - t_swap_rows_in_different_processes;
                 MPI_Sendrecv_replace(rows + (i_row - first_row)*N, N, MPI_DOUBLE, max_proc, 0, max_proc, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                t_swap_rows_in_different_processes += MPI_Wtime() - t_swap_rows_in_different_processes;
             } else if(max_row >= first_row && max_row <= last_row) {
+                t_swap_rows_in_different_processes += MPI_Wtime() - t_swap_rows_in_different_processes;
                 MPI_Sendrecv_replace(rows + (max_row - first_row)*N, N, MPI_DOUBLE, i_proc, 0, i_proc, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                t_swap_rows_in_different_processes += MPI_Wtime() - t_swap_rows_in_different_processes;
             }
             //spread C[i][i] across processes
             if(i >= first_row && i <=last_row) {
@@ -175,6 +191,7 @@ int main(int argc, char **argv) {
             //swap rows in P
             //if(i == 3)
             //    sleep(10);
+            t_swap_rows_in_P += MPI_Wtime() - t_swap_rows_in_P;
             int tmp_i, tmp_r1, tmp_r2;
             for(tmp_i = 0; tmp_i < N; tmp_i++) {
                 if(P[tmp_i] == proc_max_row)
@@ -185,6 +202,7 @@ int main(int argc, char **argv) {
             int tmp = P[tmp_r1];
             P[tmp_r1] = P[tmp_r2];
             P[tmp_r2] = tmp;
+            t_swap_rows_in_P += MPI_Wtime() - t_swap_rows_in_P;
             //tmp = P[proc_max_row];
             //P[proc_max_row] = P[i];
             //P[i] = tmp;
@@ -230,6 +248,7 @@ int main(int argc, char **argv) {
                 MPI_Recv(prev_row, N, MPI_DOUBLE, rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }*/
             //if((i+1) >= first_row && (i+1) <= last_row) {
+            t_calcs += MPI_Wtime() - t_calcs;
             if((i+1) <= last_row) {
                 if((i+1) >= first_row)
                     start = i+1;
@@ -253,6 +272,7 @@ int main(int argc, char **argv) {
                     //}
                 }
             }
+            t_calcs += MPI_Wtime() - t_calcs;
         }
         
     }
@@ -272,6 +292,7 @@ int main(int argc, char **argv) {
         free(recvcounts);
         free(displs);
         int k;
+        t_start_data_out = MPI_Wtime();
         printf("C\n");
         for(i = 0; i < N; i++) {
             for(k = 0; k < N; k++) {
@@ -290,6 +311,7 @@ int main(int argc, char **argv) {
             }
             printf("\n");
         }
+        t_end_data_out = MPI_Wtime();
     }
     if(rank > 0) {
         //sleep(9);
@@ -307,9 +329,16 @@ int main(int argc, char **argv) {
         free(P);
         free(pivot_values);
         free(pivot_rows);
+        fprintf(stderr, "scatter data. time = %f\n", t_scatter_data - t_start);
+        fprintf(stderr, "swap rows in P. time = %f\n", t_swap_rows_in_P - t_start);
+        fprintf(stderr, "DATA OUT. time = %f\n", t_end_data_out - t_start_data_out);
+        fprintf(stderr, "Total time = %f\n", MPI_Wtime() - t_start);
     }
     if(rank > 0) {
-        //free(rows);
+        fprintf(stderr, "rank = %d, swap rows in the same process. time = %f\n", rank, t_swap_rows_in_the_same_process - t_start);
+        fprintf(stderr, "rank = %d, swap rows in different processes. time = %f\n", rank, t_swap_rows_in_different_processes - t_start);
+        fprintf(stderr, "rank = %d, Calculation. time = %f\n", rank, t_calcs - t_start);
+        free(rows);
         rows = NULL;
     }
     MPI_Barrier(MPI_COMM_WORLD);
