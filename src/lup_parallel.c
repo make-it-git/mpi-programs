@@ -275,8 +275,10 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Total time = %f\n", MPI_Wtime() - t_start);
     }
     if(rank > 0) {
-        fprintf(stderr, "rank = %d, swap rows in the same process. time = %f\n", rank, t_swap_rows_in_the_same_process - t_start);
-        fprintf(stderr, "rank = %d, swap rows in different processes. time = %f\n", rank, t_swap_rows_in_different_processes - t_start);
+        fprintf(stderr, "rank = %d, swap rows in the same process. time = %f\n", rank, \
+                t_swap_rows_in_the_same_process == 0 ? 0 : t_swap_rows_in_the_same_process - t_start);
+        fprintf(stderr, "rank = %d, swap rows in different processes. time = %f\n", rank, \
+                t_swap_rows_in_different_processes == 0 ? 0 : t_swap_rows_in_different_processes - t_start);
         fprintf(stderr, "rank = %d, Calculation. time = %f\n", rank, t_calcs - t_start);
         free(rows);
         rows = NULL;
