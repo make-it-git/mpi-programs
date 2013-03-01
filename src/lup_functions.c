@@ -133,3 +133,11 @@ void LUP_mpi_swap_rows(double *C, int row1, int row2, int first_row, int N) {
         C[r2N + i] = tmp;
     }
 }
+
+void LUP_find_first_last_rows(int rank, int size, int N, int rows_per_process, int *first_row, int *last_row) {
+    if(rank == size - 1)
+        *last_row = N-1;
+    else
+        *last_row = rank * rows_per_process - 1;
+    *first_row = (rank - 1) * rows_per_process;
+}
