@@ -113,3 +113,22 @@ void parallel_calc_S(int **P, char *alphabet, char *str1, int str1_len, int str2
     free(S_current);
     free(S_prev);
 }
+
+void LCS_IO_calc_P(MPI_File f_str2, char *alphabet, int alphabet_len, MPI_File f_P, int first_row, int last_row) {
+    MPI_Offset str2_len;
+    MPI_File_get_size(f_str2, &str2_len);
+    int *P = (int*)malloc(sizeof(int) * (str2_len + 1));
+    char *str2 = malloc(sizeof(char) * (str2_len + 1));
+    MPI_File_read_all(f_str2, str2, str2_len, MPI_CHAR, MPI_STATUS_IGNORE);
+    str2[str2_len] = '\0';
+    int i, k;
+    MPI_File_set_view(f_P, sizeof(int) * first_row * (str2_len + 1), MPI_INT, MPI_INT, "native", MPI_INFO_NULL);
+    for(i = first_row; i <= last_row; i++) {
+        for(k = 0; k <= str2_len; k++) {
+            calc_Pij(P, i, k, str2, alphabet);
+        }
+        MPI_File_write(f_P, P, str2_len + 1, MPI_INT, MPI_STATUS_IGNORE);
+    }
+    free(P);
+    free(str2);
+}
