@@ -104,6 +104,7 @@ int main(int argc, char **argv) {
         end_t = MPI_Wtime();
         printf("rank=%d: %f seconds for [calculation of S]\n", rank, end_t-start_t);
         fprintf(f3, "lcs length = %d\n", S[str1_len][str2_len]);
+        fprintf(f3, "lcs sequence\n");
         fprintf(f3, "%s\n", lcs_sequence(S, S[str1_len][str2_len], str1, str1_len, str2, str2_len));
         for(i = 0; i <= str1_len; i++) {
             free(S[i]);
