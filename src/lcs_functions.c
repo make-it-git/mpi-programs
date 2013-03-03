@@ -121,13 +121,16 @@ void LCS_IO_calc_P(MPI_File f_str2, char *alphabet, int alphabet_len, MPI_File f
     char *str2 = malloc(sizeof(char) * (str2_len + 1));
     MPI_File_read_all(f_str2, str2, str2_len, MPI_CHAR, MPI_STATUS_IGNORE);
     str2[str2_len] = '\0';
+    MPI_Datatype one_row;
+    MPI_Type_contiguous(str2_len + 1, MPI_INT, &one_row);
+    MPI_Type_commit(&one_row);
     int i, k;
     MPI_File_set_view(f_P, sizeof(int) * first_row * (str2_len + 1), MPI_INT, MPI_INT, "native", MPI_INFO_NULL);
     for(i = first_row; i <= last_row; i++) {
         for(k = 0; k <= str2_len; k++) {
             calc_Pij(P, i, k, str2, alphabet);
         }
-        MPI_File_write(f_P, P, str2_len + 1, MPI_INT, MPI_STATUS_IGNORE);
+        MPI_File_write(f_P, P, 1, one_row, MPI_STATUS_IGNORE);
     }
     free(P);
     free(str2);
