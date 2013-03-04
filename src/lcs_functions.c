@@ -150,7 +150,7 @@ void LCS_IO_calc_S(MPI_File f_str1, MPI_File f_str2, MPI_File f_P, MPI_File f_S,
     int i, k;
     for(i = 0; i <= str1_len; i++) {
         if(i > 0) { // read previous row
-            MPI_File_read_at(f_S, sizeof(int) * (i - 1) * (str2_len + 1), S_prev, str2_len + 1, MPI_INT, MPI_STATUS_IGNORE);
+            MPI_File_read_at_all(f_S, sizeof(int) * (i - 1) * (str2_len + 1), S_prev, str2_len + 1, MPI_INT, MPI_STATUS_IGNORE);
         }
         for(k = first_column; k <= last_column; k++) {
             if(i == 0 || k == 0) {
