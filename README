@@ -1,0 +1,3 @@
+LCS (longest common subsequence) algorithm is based on the following paper - www.iaeng.org/publication/WCE2010/WCE2010_pp499-504.pdf.
+LUP is LUP-decompostion algorithm.
+All parallel algorithms are done using MPI library.
