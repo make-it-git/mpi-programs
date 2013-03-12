@@ -98,8 +98,14 @@ void parallel_calc_S(int **P, char *alphabet, char *str1, int str1_len, int str2
             // get previous row
             MPI_Bcast(S_prev, str2_len+1, MPI_INT, 0, MPI_COMM_WORLD);
         }
+        // if we have 101 columns (100 cells for str2 + 1 cell for '0'),
+        // and 3 processes work here (not including rank=0)
+        // then rank=1 processes columns from 0 to 32 (including 32)
+        // rank=2 processes columns from 33 to 66(including)
+        // rank=3 processes columns from 67 to 101(including)
         for(j = start_column; j <= end_column; j++) {
-            if(i == 0 || j == 0) {
+            if(i == 0 || j == 0) { // first row (actually '0' row) and first column (actually '0' column)
+                                   // are filled with zeros
                 S_current[j - start_column] = 0;
             } else {
                 int c = strchr(alphabet, str1[i-1]) - alphabet;
