@@ -67,8 +67,13 @@ void parallel_calc_P(char *str2, int str2_len, char *alphabet, int alphabet_len)
     int *P = (int*)malloc(sizeof(void*) * (str2_len + 1));
     for(i = 0; i < alphabet_len; i++) {
         if(((i % size) + 1) == rank) {
-            for(j = 0; j <= str2_len; j++) {
-                calc_Pij(P, i, j, str2, alphabet);
+            P[0] = 0;
+            for(j = 1; j <= str2_len; j++) {
+                if(str2[j-1] == alphabet[i]) {
+                    P[j] = j;
+                } else {
+                    P[j] = P[j-1];
+                }
             }
             MPI_Send(P, str2_len+1, MPI_INT, 0, 0, MPI_COMM_WORLD);
         }
