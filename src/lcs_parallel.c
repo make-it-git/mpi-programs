@@ -12,6 +12,12 @@ int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if(size == 1) {
+        fprintf(stderr, "At least 2 processes expected\n");
+        return 1;
+    }
     char *str1 = (char*)malloc(sizeof(char) * BUF_SIZE);
     char *str2 = (char*)malloc(sizeof(char) * BUF_SIZE);
     int str1_len;
@@ -52,8 +58,6 @@ int main(int argc, char **argv) {
     if(rank==0) {
         start_t = MPI_Wtime();
     }
-    int size;
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
     size -= 1;
     int **P = (int**)malloc(sizeof(void*) * alp_len);
     int i;
