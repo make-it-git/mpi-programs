@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "lup_functions.h"
-#include <unistd.h>
 
 int main(int argc, char **argv) {
     if(argc != 4) {

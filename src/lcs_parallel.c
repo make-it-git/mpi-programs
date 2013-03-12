@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "lcs_functions.h"
-#include <unistd.h>
 
 #define BUF_SIZE (1024*1024)
 
