@@ -76,16 +76,16 @@ void parallel_calc_P(char *str2, int str2_len, char *alphabet, int alphabet_len)
     int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     size -= 1; // rank=0 does not work here
+    int *P = (int*)malloc(sizeof(void*) * (str2_len + 1));
     for(i = 0; i < alphabet_len; i++) {
         if(((i % size) + 1) == rank) {
-            int *P = (int*)malloc(sizeof(void*) * (str2_len + 1));
             for(j = 0; j <= str2_len; j++) {
                 calc_Pij(P, i, j, str2, alphabet);
             }
             MPI_Send(P, str2_len+1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-            free(P);
         }
     }
+    free(P);
 }
 
 void parallel_calc_S(int **P, char *alphabet, char *str1, int str1_len, int str2_len) {
