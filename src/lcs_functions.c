@@ -56,18 +56,6 @@ inline void calc_Sij(int **S, int i, int j, char *str1, int **P, char *alphabet)
         }
     }
 }
-inline void calc_S_current(int *S_current, int *S_prev, int i, int j, int neg_displacement, char *str1, int **P, char *alphabet) {
-    if(i == 0 || j == 0) {
-        S_current[j-neg_displacement] = 0;
-    } else {
-        int c = strchr(alphabet, str1[i-1]) - alphabet;
-        if(P[c][j] == 0) {
-            S_current[j-neg_displacement] = max(S_prev[j], 0);
-        } else {
-            S_current[j-neg_displacement] = max(S_prev[j], S_prev[P[c][j] - 1] + 1);
-        }
-    }
-}
 
 void parallel_calc_P(char *str2, int str2_len, char *alphabet, int alphabet_len) {
     int i,j;
