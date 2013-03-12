@@ -106,7 +106,16 @@ void parallel_calc_S(int **P, char *alphabet, char *str1, int str1_len, int str2
             MPI_Bcast(S_prev, str2_len+1, MPI_INT, 0, MPI_COMM_WORLD);
         }
         for(j = start; j < end; j++) {
-            calc_S_current(S_current, S_prev, i, j, (rank-1)*chunk_size, str1, P, alphabet);
+            if(i == 0 || j == 0) {
+                S_current[j-start] = 0;
+            } else {
+                int c = strchr(alphabet, str1[i-1]) - alphabet;
+                if(P[c][j] == 0) {
+                    S_current[j-start] = max(S_prev[j], 0);
+                } else {
+                    S_current[j-start] = max(S_prev[j], S_prev[P[c][j] - 1] + 1);
+                }
+            }
         }
         MPI_Gatherv(S_current, end-start, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, MPI_COMM_WORLD);
     }
