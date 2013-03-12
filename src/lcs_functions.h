@@ -7,7 +7,7 @@
 
 #define max(x,y) ((x) > (y) ? (x) : (y))
 
-int lcs_length(int **L, char *str1, int len1, char *str2, int len2);
+int lcs_length(int **S, char *str1, int len1, char *str2, int len2);
 
 char* lcs_sequence(int **L, int len, char *str1, int str1_len, char *str2, int str2_len);
 
