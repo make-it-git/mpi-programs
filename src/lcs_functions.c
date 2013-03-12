@@ -87,30 +87,30 @@ void parallel_calc_S(int **P, char *alphabet, char *str1, int str1_len, int str2
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     size -= 1; // rank=0 does not work here
     chunk_size = (str2_len + 1) / size;
-    int *S_prev = (int*)malloc(sizeof(int) * (str2_len + 1));
-    int start = (rank-1)*chunk_size;
-    int end = rank*chunk_size;
+    int *S_prev = (int*)malloc(sizeof(int) * (str2_len + 1)); // previous row
+    int start_column = (rank - 1) * chunk_size;
+    int end_column = rank * chunk_size - 1;
     if(rank == size)
-        end = str2_len + 1;
-    int *S_current = (int*)malloc(sizeof(int) * (end-start));
+        end_column = str2_len;
+    int *S_current = (int*)malloc(sizeof(int) * (end_column - start_column + 1));
     for(i = 0; i <= str1_len; i++) {
         if(i > 0) {
             // get previous row
             MPI_Bcast(S_prev, str2_len+1, MPI_INT, 0, MPI_COMM_WORLD);
         }
-        for(j = start; j < end; j++) {
+        for(j = start_column; j <= end_column; j++) {
             if(i == 0 || j == 0) {
-                S_current[j-start] = 0;
+                S_current[j - start_column] = 0;
             } else {
                 int c = strchr(alphabet, str1[i-1]) - alphabet;
                 if(P[c][j] == 0) {
-                    S_current[j-start] = max(S_prev[j], 0);
+                    S_current[j - start_column] = max(S_prev[j], 0);
                 } else {
-                    S_current[j-start] = max(S_prev[j], S_prev[P[c][j] - 1] + 1);
+                    S_current[j - start_column] = max(S_prev[j], S_prev[P[c][j] - 1] + 1);
                 }
             }
         }
-        MPI_Gatherv(S_current, end-start, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(S_current, end_column - start_column + 1, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, MPI_COMM_WORLD);
     }
     free(S_current);
     free(S_prev);
