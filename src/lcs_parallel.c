@@ -76,20 +76,20 @@ int main(int argc, char **argv) {
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank == 0) {
         int **S = (int**)malloc(sizeof(void*) * (str1_len + 1));
-        int *rcvcounts = (int*)malloc(sizeof(int) * size+1);
-        int *displs = (int*)malloc(sizeof(int) * size+1);
+        int *rcvcounts = (int*)malloc(sizeof(int) * size + 1);
+        int *displs = (int*)malloc(sizeof(int) * size + 1);
         int chunk_size = (str2_len + 1) / size;
-        int start;
-        int end;
+        int start_column;
+        int end_column;
         rcvcounts[0] = 0;
         displs[0] = 0;
         for(i = 1; i <= size; i++) {
-            start = (i-1) * chunk_size;
-            end = i * chunk_size;
+            start_column = (i - 1) * chunk_size;
+            end_column = i * chunk_size - 1;
             if(i == size)
-                end = str2_len + 1;
-            rcvcounts[i] = end - start;
-            displs[i] = start;
+                end_column = str2_len;
+            rcvcounts[i] = end_column - start_column + 1;
+            displs[i] = start_column;
         }
         for(i = 0; i <= str1_len; i++) {
             S[i] = (int*)malloc(sizeof(int) * (str2_len + 1));
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
         for(i = 0; i <= str1_len; i++) {
             MPI_Gatherv(NULL, 0, MPI_INT, S[i], rcvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
             if(i != str1_len) // this is not last row
-                MPI_Bcast(S[i], str2_len+1, MPI_INT, 0, MPI_COMM_WORLD);
+                MPI_Bcast(S[i], str2_len + 1, MPI_INT, 0, MPI_COMM_WORLD);
         }
         end_t = MPI_Wtime();
         printf("rank=%d: %f seconds for [calculation of S]\n", rank, end_t-start_t);
