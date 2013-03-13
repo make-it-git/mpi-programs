@@ -1,5 +1,5 @@
 CC=mpicc
-CFLAGS=-Wall -Wextra
+CFLAGS=-Wall -Wextra -O2
 
 all: bin/lcs_sequential bin/test_lcs_sequential bin/test_lcs_parallel bin/lcs_parallel bin/lcs_generate_strings bin/test_lup_functions bin/lup_sequential bin/lup_generate_matrix bin/lup_parallel bin/lcs_parallel_io
 
