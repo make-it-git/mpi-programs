@@ -35,6 +35,7 @@ int main(int argc, char **argv) {
     double *A = NULL; // initial matrix
     MPI_Win win_A; // window for matrix A (initial matrix)
     if(rank == 0) {
+        // read matrix A from file
         LUP_mpi_matrix_create(&A, N);
         FILE *f_in;
         f_in = fopen(filename_in, "rb");
@@ -47,22 +48,23 @@ int main(int argc, char **argv) {
         }
         fclose(f_in);
         // end read matrix A from file
-        // spread rows across processes
     } // rank=0
+    // spread rows across processes
     MPI_Win_create(A, N*N*sizeof(double), sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, &win_A);
     MPI_Win_fence(0, win_A);
-    double *rows = NULL;
+    double *rows = NULL; // local rows for processes with rank>0
     if(rank > 0) {
         rows = (double*)malloc(sizeof(double) * N * rp);
         MPI_Get(rows, N * rp, MPI_DOUBLE, 0, (rank - 1) * rows_per_process * N, N * rp, MPI_DOUBLE, win_A);
     } // rank>0
     MPI_Win_fence(0, win_A);
 
+    
+    double *C = NULL; // results matrix
+    int *P = NULL; // identity matrix
     if(rank == 0) {
-        //double *A = NULL; // initial matrix
-        double *C = NULL; // results matrix
-        int *P = NULL; // identity matrix
-        // read matrix A from file
+        C = NULL; // results matrix
+        P = NULL; // identity matrix
         LUP_mpi_matrix_create(&C, N);
         P = (int*)malloc(sizeof(int) * N); // matrix P is represented as vector of indexes
                                            // P[i] = k, i - row, k = column, where '1' is located
@@ -76,17 +78,79 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Unable to open file '%s'\n", filename_out);
             return 1;
         }
-        /*double *pivot_values = (double*)malloc(sizeof(double) * size);
-        int *pivot_rows = (int*)malloc(sizeof(int) * size);
-        int proc;
-        double proc_max_value;
-        int proc_max_row;
-        // main loop for rank=0
-        for(i = 0; i < N-1; i++) { // last cell of matrix (C[N-1][N-1] does not participate, because it is not necessary
-            // get all local pivot_value and pivot_row
-            // pivot_values[0] and pivot_rows[0] has been sent from rank=0 and are not significant
-            MPI_Gather(pivot_values, 1, MPI_DOUBLE, pivot_values, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-            MPI_Gather(pivot_rows, 1, MPI_INT, pivot_rows, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    }
+
+    MPI_Win win_C;
+    MPI_Win_create(C, N*N*sizeof(double), sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, &win_C);
+
+    double *pivot_values = NULL;
+    int *pivot_rows = NULL;
+    int proc;
+    double proc_max_value;
+    int proc_max_row;
+    if(rank == 0) {
+        pivot_values = (double*)malloc(sizeof(double) * size);
+        pivot_rows = (int*)malloc(sizeof(int) * size);
+    }
+    int first_row = -1;
+    int last_row = -1;
+    if(rank > 0) {
+        // every process finds out, which rows it processes
+        // for example
+        // if we have 10 rows and 4 processes (including rank=0)
+        // then processes with rank 1,2,3 receive rows from rank=0
+        // rank=1 receives rows from 0 to 2 (including 2), 3 rows  
+        // rank=2 receives rows from 3 to 5 (including 5), 3 rows  3+3+4=10
+        // rank =3 reeives rows from 6 to 9 (including 9), 4 rows  
+        LUP_find_first_last_rows(rank, size, N, rows_per_process, &first_row, &last_row);
+    }
+
+    double pivot_value;
+    int pivot_row;
+    int i_row; // i_row=i (currently processed row)
+    int max_row; // max_row - row with maximum element in column 'i'
+                 // maximum element is searched for in lines i+1 to N-1 (including N-1) of column 'i'
+    int max_proc; // rank of process, which contains max_row
+    double Cii;
+
+    MPI_Win win_rows;
+    MPI_Win_create(rows, N * rp * sizeof(double), sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, &win_rows);
+    MPI_Win win_pivot_value, win_pivot_row;
+    MPI_Win_create(&pivot_value, sizeof(double), sizeof(double), MPI_INFO_NULL, MPI_COMM_WORLD, &win_pivot_value);
+    MPI_Win_create(&pivot_row, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win_pivot_row);
+    MPI_Win win_max_row;
+    MPI_Win_create(&proc_max_row, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win_max_row);
+
+    for(i = 0; i < N - 1; i++) {
+        MPI_Win_fence(0, win_pivot_value);
+        MPI_Win_fence(0, win_pivot_row);
+        if(rank == 0) { // find global maximum
+            proc_max_value = 0;
+            proc_max_row = -1;
+            int proc_last_row;
+            int max_proc = -1;
+            for(proc = 1; proc < size; proc++) {
+                if(proc == size - 1) proc_last_row = N-1;
+                else proc_last_row = proc*rows_per_process - 1;
+                if(i <= proc_last_row) {
+                    MPI_Get(pivot_values + proc, 1, MPI_DOUBLE, proc, 0, 1, MPI_DOUBLE, win_pivot_value);
+                    MPI_Get(pivot_rows + proc, 1, MPI_INT, proc, 0, 1, MPI_INT, win_pivot_row);
+                }
+            }
+        }
+        if(rank > 0) { // find local maximum
+            if(LUP_mpi_find_pivot(rows, first_row, last_row, i, N, &pivot_value, &pivot_row) == 0) { // pivot row found
+                if(fabs(pivot_value) < 1E-6) { // too close to 0 (zero)
+                    fprintf(stderr, "Matrix is singular\n");
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+            } // now rank=0 can find global maximum by accessing pivot_value and pivot_row via MPI_Get
+        }
+        MPI_Win_fence(0, win_pivot_value);
+        MPI_Win_fence(0, win_pivot_row);
+        // rank=0 received pivot_values and pivot_rows
+        // now we can find global maximum
+        if(rank == 0 ) {
             proc_max_value = 0;
             proc_max_row = -1;
             int proc_last_row;
@@ -103,10 +167,27 @@ int main(int argc, char **argv) {
                 }
             }
             //swap rows in P
-            //t_swap_rows_in_P += MPI_Wtime() - t_swap_rows_in_P;
             int tmp = P[proc_max_row];
             P[proc_max_row] = P[i];
             P[i] = tmp;
+        } // we found global maximum
+        // now all processes with rank>0 can receive global maximum
+        MPI_Win_fence(0, win_max_row);
+        if(rank > 0) {
+            MPI_Get(&max_row, 1, MPI_INT, 0, 0, 1, MPI_INT, win_max_row);
+        }
+        MPI_Win_fence(0, win_max_row);
+    }
+
+
+    if(rank == 0) {
+        /*
+        // main loop for rank=0
+        for(i = 0; i < N-1; i++) { // last cell of matrix (C[N-1][N-1] does not participate, because it is not necessary
+            // get all local pivot_value and pivot_row
+            // pivot_values[0] and pivot_rows[0] has been sent from rank=0 and are not significant
+            MPI_Gather(pivot_values, 1, MPI_DOUBLE, pivot_values, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Gather(pivot_rows, 1, MPI_INT, pivot_rows, 1, MPI_INT, 0, MPI_COMM_WORLD);
             //t_swap_rows_in_P += MPI_Wtime() - t_swap_rows_in_P;
             MPI_Recv(&i_proc, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             //swap rows in C (swap row i with row proc_max_row, proc_max_row is in process max_proc)
@@ -155,47 +236,19 @@ int main(int argc, char **argv) {
             }
             fprintf(f_out, "\n");
         }
-        fclose(f_out);
-        //t_end_data_out = MPI_Wtime();
+        fclose(f_out);*/
         LUP_mpi_matrix_free(&A);
         LUP_mpi_matrix_free(&C);
         free(P);
-        free(pivot_values);
-        free(pivot_rows);
-        //fprintf(stderr, "scatter data. time = %f\n", t_scatter_data - t_start);
-        //fprintf(stderr, "swap rows in P. time = %f\n", t_swap_rows_in_P - t_start);
-        //fprintf(stderr, "DATA OUT. time = %f\n", t_end_data_out - t_start_data_out);
-        //fprintf(stderr, "Total time = %f\n", MPI_Wtime() - t_start);
-        */
+        //free(pivot_values);
+        //free(pivot_rows);
     } // if rank==0
 
     if(rank > 0) {
-        int first_row = -1;
-        int last_row = -1;
-        // every process finds out, which rows it processes
-        // for example
-        // if we have 10 rows and 4 processes (including rank=0)
-        // then processes with rank 1,2,3 receive rows from rank=0
-        // rank=1 receives rows from 0 to 2 (including 2), 3 rows  
-        // rank=2 receives rows from 3 to 5 (including 5), 3 rows  3+3+4=10
-        // rank =3 reeives rows from 6 to 9 (including 9), 4 rows  
-        LUP_find_first_last_rows(rank, size, N, rows_per_process, &first_row, &last_row);
 
-        /*double pivot_value;
-        int pivot_row;
-        int i_row; // i_row=i (currently processed row)
-        int max_row; // max_row - row with maximum element in column 'i'
-                     // maximum element is searched for in lines i+1 to N-1 (including N-1) of column 'i'
-        int max_proc; // rank of process, which contains max_row
-        double Cii;
+        /*
         // mail loop for rank>0
         for(i = 0; i < N-1; i++) { // last cell of matrix (C[N-1][N-1] does not participate, because it is not necessary
-            if(LUP_mpi_find_pivot(rows, first_row, last_row, i, N, &pivot_value, &pivot_row) == 0) { // pivot row found
-                if(fabs(pivot_value) < 1E-6) { // too close to 0 (zero)
-                    fprintf(stderr, "Matrix is singular\n");
-                    MPI_Abort(MPI_COMM_WORLD, 1);
-                }
-            }
             // send local pivot_row and pivot_value to rank=0
             // so it can find global pivot_value and pivot_row
             MPI_Gather(&pivot_value, 1, MPI_DOUBLE, NULL, 0, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -260,6 +313,11 @@ int main(int argc, char **argv) {
 
     free(prev_row);
     MPI_Win_free(&win_A);
+    MPI_Win_free(&win_C);
+    MPI_Win_free(&win_rows);
+    MPI_Win_free(&win_pivot_value);
+    MPI_Win_free(&win_pivot_row);
+    MPI_Win_free(&win_max_row);
 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
