@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
 
     double *prev_row = (double*)malloc(sizeof(double) * N); // rank=0 receive this too in MPI_Bcast
                                                             // but it does not use it
-    int i_proc; // rank of process, which contains row 'i' (currently processed row)
+    int i_rank; // rank of process, which contains row 'i' (currently processed row)
 
     double *A = NULL; // initial matrix
     MPI_Win win_A; // window for matrix A (initial matrix)
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
     int pivot_row;
     int max_row; // max_row - row with maximum element in column 'i'
                  // maximum element is searched for in lines i+1 to N-1 (including N-1) of column 'i'
-    int max_proc; // rank of process, which contains max_row
+    int max_rank; // rank of process, which contains max_row
     double Cii;
 
     MPI_Win win_rows;
@@ -119,10 +119,10 @@ int main(int argc, char **argv) {
     MPI_Win_create(&pivot_row, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win_pivot_row);
     MPI_Win win_max_row;
     MPI_Win_create(&proc_max_row, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win_max_row);
-    MPI_Win win_max_proc;
-    MPI_Win_create(&max_proc, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win_max_proc);
-    MPI_Win win_i_proc;
-    MPI_Win_create(&i_proc, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win_i_proc);
+    MPI_Win win_max_rank;
+    MPI_Win_create(&max_rank, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win_max_rank);
+    MPI_Win win_i_rank;
+    MPI_Win_create(&i_rank, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win_i_rank);
 
     for(i = 0; i < N - 1; i++) {
         MPI_Win_fence(0, win_pivot_value);
@@ -157,18 +157,18 @@ int main(int argc, char **argv) {
             proc_max_row = -1;
             int proc_last_row;
             int proc_first_row = -1;
-            i_proc = -1;
+            i_rank = -1;
             for(proc = 1; proc < size; proc++) {
                 if(proc == size - 1) proc_last_row = N-1;
                 else proc_last_row = proc*rows_per_process - 1;
                 proc_first_row = (proc - 1) * rows_per_process;
                 if(i >= proc_first_row && i <= proc_last_row)
-                    i_proc = proc;
+                    i_rank = proc;
                 if(i <= proc_last_row) {
                     if(pivot_values[proc] > proc_max_value) {
                         proc_max_value = pivot_values[proc];
                         proc_max_row = pivot_rows[proc];
-                        max_proc = proc;
+                        max_rank = proc;
                     }
                 }
             }
@@ -179,16 +179,16 @@ int main(int argc, char **argv) {
         } // we found global maximum
         // now all processes with rank>0 can receive global maximum
         MPI_Win_fence(0, win_max_row);
-        MPI_Win_fence(0, win_max_proc);
-        MPI_Win_fence(0, win_i_proc);
+        MPI_Win_fence(0, win_max_rank);
+        MPI_Win_fence(0, win_i_rank);
         if(rank > 0) {
             MPI_Get(&max_row, 1, MPI_INT, 0, 0, 1, MPI_INT, win_max_row);
-            MPI_Get(&max_proc, 1, MPI_INT, 0, 0, 1, MPI_INT, win_max_proc);
-            MPI_Get(&i_proc, 1, MPI_INT, 0, 0, 1, MPI_INT, win_i_proc);
+            MPI_Get(&max_rank, 1, MPI_INT, 0, 0, 1, MPI_INT, win_max_rank);
+            MPI_Get(&i_rank, 1, MPI_INT, 0, 0, 1, MPI_INT, win_i_rank);
         }
         MPI_Win_fence(0, win_max_row);
-        MPI_Win_fence(0, win_max_proc);
-        MPI_Win_fence(0, win_i_proc);
+        MPI_Win_fence(0, win_max_rank);
+        MPI_Win_fence(0, win_i_rank);
         // now swap rows
         if(rank > 0) {
             // both rows are in the same process
@@ -196,10 +196,10 @@ int main(int argc, char **argv) {
                 LUP_mpi_swap_rows(rows, i, max_row, first_row, N);
             // otherwise rows are in different processes
             } else if(i >= first_row && i <= last_row) {
-                MPI_Sendrecv_replace(rows + (i - first_row)*N, N, MPI_DOUBLE, max_proc, 0, max_proc, 0, \
+                MPI_Sendrecv_replace(rows + (i - first_row)*N, N, MPI_DOUBLE, max_rank, 0, max_rank, 0, \
                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             } else if(max_row >= first_row && max_row <= last_row) {
-                MPI_Sendrecv_replace(rows + (max_row - first_row)*N, N, MPI_DOUBLE, i_proc, 0, i_proc, 0, \
+                MPI_Sendrecv_replace(rows + (max_row - first_row)*N, N, MPI_DOUBLE, i_rank, 0, i_rank, 0, \
                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
         }
@@ -209,29 +209,29 @@ int main(int argc, char **argv) {
                 MPI_Bcast(rows + (i - first_row)*N + i, 1, MPI_DOUBLE, rank, MPI_COMM_WORLD); 
                 Cii = rows[(i-first_row)*N + i];
             } else {
-                MPI_Bcast(&Cii, 1, MPI_DOUBLE, i_proc, MPI_COMM_WORLD);
+                MPI_Bcast(&Cii, 1, MPI_DOUBLE, i_rank, MPI_COMM_WORLD);
             }
         }
         if(rank == 0)
-            MPI_Bcast(&Cii, 1, MPI_DOUBLE, i_proc, MPI_COMM_WORLD);
+            MPI_Bcast(&Cii, 1, MPI_DOUBLE, i_rank, MPI_COMM_WORLD);
         MPI_Win_fence(0, win_rows);
-        if(rank > 0 && rank != i_proc) {
-            MPI_Get(prev_row, N, MPI_DOUBLE, i_proc, (i - (i_proc - 1)*rows_per_process)*N, N, MPI_DOUBLE, win_rows);
+        if(rank > 0 && rank != i_rank) {
+            MPI_Get(prev_row, N, MPI_DOUBLE, i_rank, (i - (i_rank - 1)*rows_per_process)*N, N, MPI_DOUBLE, win_rows);
         }
         MPI_Win_fence(0, win_rows);
         int j, k;
-        int start, end;
+        int start_row, end_row;
         if((i+1) <= last_row) {
             if((i+1) >= first_row)
-                start = i+1;
+                start_row = i+1;
             else
-                start = first_row;
-            end = last_row - first_row;
-            start = start - first_row;
-            for(j = start; j <= end; j++) {
+                start_row = first_row;
+            end_row = last_row - first_row;
+            start_row = start_row - first_row;
+            for(j = start_row; j <= end_row; j++) {
                 rows[j*N + i] /= Cii;
                 for(k = i+1; k < N; k++) {
-                    if(rank == i_proc)
+                    if(rank == i_rank)
                         rows[j*N + k] -= rows[j*N + i] * rows[(i-first_row) * N + k];
                     else
                         rows[j*N + k] -= rows[j*N + i] * prev_row[k];
@@ -293,8 +293,8 @@ int main(int argc, char **argv) {
     MPI_Win_free(&win_pivot_value);
     MPI_Win_free(&win_pivot_row);
     MPI_Win_free(&win_max_row);
-    MPI_Win_free(&win_i_proc);
-    MPI_Win_free(&win_max_proc);
+    MPI_Win_free(&win_i_rank);
+    MPI_Win_free(&win_max_rank);
 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
