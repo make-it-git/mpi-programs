@@ -214,10 +214,11 @@ int main(int argc, char **argv) {
         }
         if(rank == 0)
             MPI_Bcast(&Cii, 1, MPI_DOUBLE, i_proc, MPI_COMM_WORLD);
-        if(rank == i_proc)
-            MPI_Bcast(rows + (i - first_row)*N, N, MPI_DOUBLE, i_proc, MPI_COMM_WORLD);
-        else
-            MPI_Bcast(prev_row, N, MPI_DOUBLE, i_proc, MPI_COMM_WORLD);
+        MPI_Win_fence(0, win_rows);
+        if(rank > 0 && rank != i_proc) {
+            MPI_Get(prev_row, N, MPI_DOUBLE, i_proc, (i - (i_proc - 1)*rows_per_process)*N, N, MPI_DOUBLE, win_rows);
+        }
+        MPI_Win_fence(0, win_rows);
         int j, k;
         int start, end;
         if((i+1) <= last_row) {
