@@ -57,17 +57,6 @@ int main(int argc, char **argv) {
         MPI_Get(rows, N * rp, MPI_DOUBLE, 0, (rank - 1) * rows_per_process * N, N * rp, MPI_DOUBLE, win_A);
     } // rank>0
     MPI_Win_fence(0, win_A);
-    if(rank > 0) {
-        sleep(rank);
-        printf("rank = %d\n", rank);
-        int l, m;
-        for(l = 0; l < rp; l++) {
-            for(m = 0; m < N; m++) {
-                printf("%f\t", *(rows + l*N + m));
-            }
-            printf("\n");
-        }
-    }
 
     if(rank == 0) {
         //double *A = NULL; // initial matrix
