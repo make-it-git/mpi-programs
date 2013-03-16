@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "lup_functions.h"
+#include <string.h>
 
 int main(int argc, char **argv) {
     if(argc != 4) {
@@ -30,6 +31,7 @@ int main(int argc, char **argv) {
 
     double *prev_row = (double*)malloc(sizeof(double) * N); // rank=0 receive this too in MPI_Bcast
                                                             // but it does not use it
+    double *buf = (double*)malloc(sizeof(double) * N);
     int i_rank; // rank of process, which contains row 'i' (currently processed row)
 
     double *A = NULL; // initial matrix
@@ -188,18 +190,22 @@ int main(int argc, char **argv) {
         MPI_Win_fence(0, win_max_rank);
         MPI_Win_fence(0, win_i_rank);
         // now swap rows
+        MPI_Win_fence(0, win_rows);
         if(rank > 0) {
             // both rows are in the same process
             if(i >= first_row && i <= last_row && max_row >= first_row && max_row <= last_row) { 
                 LUP_mpi_swap_rows(rows, i, max_row, first_row, N);
             // otherwise rows are in different processes
             } else if(i >= first_row && i <= last_row) {
-                MPI_Sendrecv_replace(rows + (i - first_row)*N, N, MPI_DOUBLE, max_rank, 0, max_rank, 0, \
-                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            } else if(max_row >= first_row && max_row <= last_row) {
-                MPI_Sendrecv_replace(rows + (max_row - first_row)*N, N, MPI_DOUBLE, i_rank, 0, i_rank, 0, \
-                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Get(buf, N, MPI_DOUBLE, max_rank, \
+                    (max_row - (max_rank - 1) * rows_per_process) * N, N, MPI_DOUBLE, win_rows);
+                MPI_Put(rows + (i - first_row) * N, N, MPI_DOUBLE, max_rank, \
+                    (max_row - (max_rank - 1) * rows_per_process) * N, N, MPI_DOUBLE, win_rows);
             }
+        }
+        MPI_Win_fence(0, win_rows);
+        if(rank > 0 && i >= first_row && i <= last_row && !(max_row >= first_row && max_row <= last_row)) {
+            memcpy(rows + (i - first_row) * N, buf, sizeof(double) * N);
         }
         //spread C[i][i] across processes
         if(rank > 0) {
@@ -284,6 +290,7 @@ int main(int argc, char **argv) {
     }
 
     free(prev_row);
+    free(buf);
     MPI_Win_free(&win_A);
     MPI_Win_free(&win_C);
     MPI_Win_free(&win_rows);
