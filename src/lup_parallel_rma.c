@@ -76,22 +76,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Unable to open file '%s'\n", filename_out);
             return 1;
         }
-        // TODO
-        /*int *sendcounts = (int*)malloc(sizeof(int) * size); // even when rank=0 does not send anything
-        int *displs = (int*)malloc(sizeof(int) * size); // still allocate memory for it's indexes
-        sendcounts[0] = displs[0] = 0; // rank=0 does not send anything (and does not receive, too)
-        for(i = 1; i < size; i++) {
-            if(i == size-1) { // rank=0 does not use variable 'rp', but it knows, how many rows go to every process
-                sendcounts[i] = rows_per_last_process * N;
-            } else {
-                sendcounts[i] = rows_per_process * N;
-            }
-            displs[i] = (i-1) * sendcounts[i-1];
-        }
-        MPI_Scatterv(A, sendcounts, displs, MPI_DOUBLE, NULL, 0, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        free(sendcounts);
-        sendcounts = NULL;*/
-
         /*double *pivot_values = (double*)malloc(sizeof(double) * size);
         int *pivot_rows = (int*)malloc(sizeof(int) * size);
         int proc;
@@ -186,9 +170,6 @@ int main(int argc, char **argv) {
     } // if rank==0
 
     if(rank > 0) {
-        // every process receives some rows
-        // TODO
-        // MPI_Scatterv(NULL, NULL, NULL, MPI_DOUBLE, rows, rp * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         int first_row = -1;
         int last_row = -1;
         // every process finds out, which rows it processes
@@ -198,9 +179,9 @@ int main(int argc, char **argv) {
         // rank=1 receives rows from 0 to 2 (including 2), 3 rows  
         // rank=2 receives rows from 3 to 5 (including 5), 3 rows  3+3+4=10
         // rank =3 reeives rows from 6 to 9 (including 9), 4 rows  
-        /*LUP_find_first_last_rows(rank, size, N, rows_per_process, &first_row, &last_row);
+        LUP_find_first_last_rows(rank, size, N, rows_per_process, &first_row, &last_row);
 
-        double pivot_value;
+        /*double pivot_value;
         int pivot_row;
         int i_row; // i_row=i (currently processed row)
         int max_row; // max_row - row with maximum element in column 'i'
