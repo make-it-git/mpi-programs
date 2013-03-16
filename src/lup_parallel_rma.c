@@ -124,17 +124,17 @@ int main(int argc, char **argv) {
     MPI_Win win_i_rank;
     MPI_Win_create(&i_rank, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win_i_rank);
 
+    int rank_last_row, rank_first_row;
     for(i = 0; i < N - 1; i++) {
         MPI_Win_fence(0, win_pivot_value);
         MPI_Win_fence(0, win_pivot_row);
         if(rank == 0) { // find global maximum
             proc_max_value = 0;
             proc_max_row = -1;
-            int proc_last_row;
             for(proc = 1; proc < size; proc++) {
-                if(proc == size - 1) proc_last_row = N-1;
-                else proc_last_row = proc*rows_per_process - 1;
-                if(i <= proc_last_row) {
+                if(proc == size - 1) rank_last_row = N-1;
+                else rank_last_row = proc*rows_per_process - 1;
+                if(i <= rank_last_row) {
                     MPI_Get(pivot_values + proc, 1, MPI_DOUBLE, proc, 0, 1, MPI_DOUBLE, win_pivot_value);
                     MPI_Get(pivot_rows + proc, 1, MPI_INT, proc, 0, 1, MPI_INT, win_pivot_row);
                 }
@@ -155,16 +155,14 @@ int main(int argc, char **argv) {
         if(rank == 0 ) {
             proc_max_value = 0;
             proc_max_row = -1;
-            int proc_last_row;
-            int proc_first_row = -1;
             i_rank = -1;
             for(proc = 1; proc < size; proc++) {
-                if(proc == size - 1) proc_last_row = N-1;
-                else proc_last_row = proc*rows_per_process - 1;
-                proc_first_row = (proc - 1) * rows_per_process;
-                if(i >= proc_first_row && i <= proc_last_row)
+                if(proc == size - 1) rank_last_row = N-1;
+                else rank_last_row = proc*rows_per_process - 1;
+                rank_first_row = (proc - 1) * rows_per_process;
+                if(i >= rank_first_row && i <= rank_last_row)
                     i_rank = proc;
-                if(i <= proc_last_row) {
+                if(i <= rank_last_row) {
                     if(pivot_values[proc] > proc_max_value) {
                         proc_max_value = pivot_values[proc];
                         proc_max_row = pivot_rows[proc];
@@ -243,13 +241,12 @@ int main(int argc, char **argv) {
 
     if(rank == 0) {
         MPI_Win_fence(0, win_rows);
-        int proc_first_row, proc_last_row;
         for(proc = 1; proc < size; proc++) {
-            if(proc == size - 1) proc_last_row = N-1;
-            else proc_last_row = proc*rows_per_process - 1;
-            proc_first_row = (proc - 1) * rows_per_process;
-            MPI_Get(C + proc_first_row * N, (proc_last_row - proc_first_row + 1) * N, MPI_DOUBLE, proc,\
-                0, (proc_last_row - proc_first_row + 1) * N, MPI_DOUBLE, win_rows);
+            if(proc == size - 1) rank_last_row = N-1;
+            else rank_last_row = proc*rows_per_process - 1;
+            rank_first_row = (proc - 1) * rows_per_process;
+            MPI_Get(C + rank_first_row * N, (rank_last_row - rank_first_row + 1) * N, MPI_DOUBLE, proc,\
+                0, (rank_last_row - rank_first_row + 1) * N, MPI_DOUBLE, win_rows);
         }
         MPI_Win_fence(0, win_rows);
         int k;
