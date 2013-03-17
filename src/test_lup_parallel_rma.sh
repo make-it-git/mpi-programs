@@ -17,3 +17,4 @@ for S in ${N[@]}; do
         diff "$TMP_SEQ" "$TMP_PAR"
     done 
 done
+rm -f "$TMP_MATR" "$TMP_SEQ" "$TMP_PAR"

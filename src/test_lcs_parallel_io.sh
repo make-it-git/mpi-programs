@@ -25,3 +25,4 @@ for S in ${N[@]}; do
         md5sum -c --quiet "$TMP_MD5"
     done 
 done
+rm -f "$TMP_STR1" "$TMP_STR2" "$TMP_PAR" "$TMP_P" "$TMP_S" "$TMP_SEQ" "$TMP_MD5"
