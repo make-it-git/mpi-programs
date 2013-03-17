@@ -215,15 +215,11 @@ int main(int argc, char **argv) {
         //spread C[i][i] across processes
         if(rank > 0) {
             if(i >= first_row && i <= last_row) {
-                MPI_Bcast(rows + (i - first_row)*N + i, 1, MPI_DOUBLE, rank, MPI_COMM_WORLD); 
                 Cii = rows[(i-first_row)*N + i];
             } else {
-                MPI_Bcast(&Cii, 1, MPI_DOUBLE, i_rank, MPI_COMM_WORLD);
+                MPI_Get(&Cii, 1, MPI_DOUBLE, i_rank, (i - (i_rank - 1) * rows_per_process) * N + i, 1, MPI_DOUBLE, win_rows);
             }
         }
-        if(rank == 0)
-            MPI_Bcast(&Cii, 1, MPI_DOUBLE, i_rank, MPI_COMM_WORLD);
-        MPI_Win_fence(0, win_rows);
         if(rank > 0 && rank != i_rank) {
             MPI_Get(prev_row, N, MPI_DOUBLE, i_rank, (i - (i_rank - 1)*rows_per_process)*N, N, MPI_DOUBLE, win_rows);
         }
@@ -253,6 +249,7 @@ int main(int argc, char **argv) {
 
 
     if(rank == 0) {
+        // Assemble result from processes with rank>0
         MPI_Win_fence(0, win_rows);
         for(proc = 1; proc < size; proc++) {
             if(proc == size - 1) rank_last_row = N-1;
@@ -290,8 +287,8 @@ int main(int argc, char **argv) {
     } // if rank==0
 
     if(rank > 0) {
-        MPI_Win_fence(0, win_rows);
-        MPI_Win_fence(0, win_rows);
+        MPI_Win_fence(0, win_rows); // this is collective operation
+        MPI_Win_fence(0, win_rows); // and is used in rank=0, so we must call this function here
         free(rows);
         rows = NULL;
     }
