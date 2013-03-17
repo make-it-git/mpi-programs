@@ -29,9 +29,14 @@ int main(int argc, char **argv) {
     int rp = (rank == size - 1) ? rows_per_last_process : rows_per_process; // actual rows_per_process for every process
                                                                             // not significant at rank=0
 
-    double *prev_row = (double*)malloc(sizeof(double) * N); // rank=0 receive this too in MPI_Bcast
-                                                            // but it does not use it
-    double *buf = (double*)malloc(sizeof(double) * N);
+    double *prev_row = NULL;
+    if(rank > 0) {
+        prev_row = (double*)malloc(sizeof(double) * N);
+    }
+    double *buf = NULL;
+    if(rank > 0) {
+        buf = (double*)malloc(sizeof(double) * N);
+    }
     int i_rank; // rank of process, which contains row 'i' (currently processed row)
 
     double *A = NULL; // initial matrix
@@ -291,8 +296,10 @@ int main(int argc, char **argv) {
         rows = NULL;
     }
 
-    free(prev_row);
-    free(buf);
+    if(rank > 0) {
+        free(prev_row);
+        free(buf);
+    }
     MPI_Win_free(&win_A);
     MPI_Win_free(&win_C);
     MPI_Win_free(&win_rows);
