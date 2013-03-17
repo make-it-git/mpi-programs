@@ -225,20 +225,22 @@ int main(int argc, char **argv) {
         MPI_Win_fence(0, win_rows);
         int j, k;
         int start_row, end_row;
-        if((i+1) <= last_row) {
-            if((i+1) >= first_row)
-                start_row = i+1;
-            else
-                start_row = first_row;
-            end_row = last_row - first_row;
-            start_row = start_row - first_row;
-            for(j = start_row; j <= end_row; j++) {
-                rows[j*N + i] /= Cii;
-                for(k = i+1; k < N; k++) {
-                    if(rank == i_rank)
-                        rows[j*N + k] -= rows[j*N + i] * rows[(i-first_row) * N + k];
-                    else
-                        rows[j*N + k] -= rows[j*N + i] * prev_row[k];
+        if(rank > 0) {
+            if((i+1) <= last_row) {
+                if((i+1) >= first_row)
+                    start_row = i+1;
+                else
+                    start_row = first_row;
+                end_row = last_row - first_row;
+                start_row = start_row - first_row;
+                for(j = start_row; j <= end_row; j++) {
+                    rows[j*N + i] /= Cii;
+                    for(k = i+1; k < N; k++) {
+                        if(rank == i_rank)
+                            rows[j*N + k] -= rows[j*N + i] * rows[(i-first_row) * N + k];
+                        else
+                            rows[j*N + k] -= rows[j*N + i] * prev_row[k];
+                    }
                 }
             }
         }
