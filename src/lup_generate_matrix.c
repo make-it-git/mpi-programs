@@ -24,8 +24,8 @@ int main(int argc, char **argv) {
     double t1, t2;
     for(i = 0; i < N; i++) {
         for(k = 0; k < N; k++) {
-            t1 = fabs(rand());
-            t2 = fabs(rand());
+            t1 = fabs((double)rand());
+            t2 = fabs((double)rand());
             if(t2 < 1E-6) t2 = t2 + 0.1;
             d = t1/t2;
             fwrite(&d, sizeof(double), 1, f);
