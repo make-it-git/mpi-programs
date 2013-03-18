@@ -98,8 +98,8 @@ int main(int argc, char **argv) {
         for(i = 0; i < N-1; i++) { // last cell of matrix (C[N-1][N-1] does not participate, because it is not necessary
             // get all local pivot_value and pivot_row
             // pivot_values[0] and pivot_rows[0] has been sent from rank=0 and are not significant
-            MPI_Gather(pivot_values, 1, MPI_DOUBLE, pivot_values, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-            MPI_Gather(pivot_rows, 1, MPI_INT, pivot_rows, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Gather(MPI_IN_PLACE, 1, MPI_DOUBLE, pivot_values, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Gather(MPI_IN_PLACE, 1, MPI_INT, pivot_rows, 1, MPI_INT, 0, MPI_COMM_WORLD);
             proc_max_value = 0;
             proc_max_row = -1;
             int proc_last_row;
