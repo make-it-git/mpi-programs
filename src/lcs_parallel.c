@@ -1,7 +1,8 @@
 #include <stdio.h>
-#include "lcs_functions.h"
+#include "lcs_functions_mpi.h"
 
 #define BUF_SIZE (1024*1024)
+#undef DEBUG_TIME
 
 int main(int argc, char **argv) {
     if(argc != 4) {
@@ -42,7 +43,9 @@ int main(int argc, char **argv) {
         fclose(f1);
         fclose(f2);
         end_t = MPI_Wtime();
+        #ifdef DEBUG_TIME
         printf("rank=%d: %f seconds for [reading from files]\n", rank, end_t-start_t);
+        #endif
     }
     if(rank==0) {
         start_t = MPI_Wtime();
@@ -53,7 +56,9 @@ int main(int argc, char **argv) {
     MPI_Bcast(str2, str2_len, MPI_CHAR, 0, MPI_COMM_WORLD);
     if(rank==0) {
         end_t = MPI_Wtime();
+        #ifdef DEBUG_TIME
         printf("rank=%d: %f seconds for [MPI_Bcast of data]\n", rank, end_t-start_t);
+        #endif
     }
     if(rank==0) {
         start_t = MPI_Wtime();
@@ -75,7 +80,9 @@ int main(int argc, char **argv) {
     }
     if(rank==0) {
         end_t = MPI_Wtime();
+        #ifdef DEBUG_TIME
         printf("rank=%d: %f seconds for [calculation of P]\n", rank, end_t-start_t);
+        #endif
     }
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank == 0) {
@@ -105,7 +112,9 @@ int main(int argc, char **argv) {
                 MPI_Bcast(S[i], str2_len + 1, MPI_INT, 0, MPI_COMM_WORLD);
         }
         end_t = MPI_Wtime();
+        #ifdef DEBUG_TIME
         printf("rank=%d: %f seconds for [calculation of S]\n", rank, end_t-start_t);
+        #endif
         fprintf(f3, "lcs length = %d\n", S[str1_len][str2_len]);
         fprintf(f3, "lcs sequence\n");
         fprintf(f3, "%s\n", lcs_sequence(S, S[str1_len][str2_len], str1, str1_len, str2, str2_len));

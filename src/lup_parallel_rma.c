@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "lup_functions.h"
+#include "lup_functions_mpi.h"
 #include <string.h>
 
 int main(int argc, char **argv) {

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "lcs_functions.h"
+#include "lcs_functions_mpi.h"
 
 int main(int argc, char **argv) {
     if(argc != 6) {
