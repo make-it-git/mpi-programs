@@ -126,7 +126,7 @@ void LCS_IO_calc_P(MPI_File f_str2, char *alphabet, MPI_File f_P, int first_row,
     MPI_Offset str2_len;
     MPI_File_get_size(f_str2, &str2_len);
     int *P = (int*)malloc(sizeof(int) * (str2_len + 1));
-    char *str2 = malloc(sizeof(char) * (str2_len + 1));
+    char *str2 = (char*)malloc(sizeof(char) * (str2_len + 1));
     MPI_File_read_all(f_str2, str2, str2_len, MPI_CHAR, MPI_STATUS_IGNORE);
     str2[str2_len] = '\0';
     MPI_Datatype one_row;
