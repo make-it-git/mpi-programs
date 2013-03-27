@@ -57,48 +57,56 @@ int main(int argc, char **argv) {
 
     int i;
     int start_index, end_index;
-    int chunk_size = alphabet_len / (size - 1);
+    int chunk_size = str2_len / (size - 1);
     if(rank > 0) {
-        // count how many times every letter from alphabet appears in str2
-        // if start_index = 2, end_index = 4, then this rank processes letters 'CDE'
-        // start_index = 10, end_index = 15, this rank processes letters 'KLMNOP'
-        // indexes start at zero (start_index = 0 corresponds to letter 'A');
+        // every rank>0 processes part of str2
+        // then rank=0 reduces results
         start_index = (rank - 1) * chunk_size;
         end_index = rank * chunk_size - 1;
         if(rank == size - 1) // last rank processes everything, what is left
-            end_index = alphabet_len - 1;
-        int *appearances = (int*)malloc(sizeof(int) * (end_index - start_index + 1));
-        memset(appearances, 0, sizeof(int) * (end_index - start_index + 1));
-        char letter;
-        for(i = 0; i < str2_len; i++) {
+            end_index = str2_len - 1;
+        int *appearances = (int*)malloc(sizeof(int) * alphabet_len);
+        // appearances[0] corresponds to 'A'
+        // appearances[25] - 'Z'
+        memset(appearances, 0, sizeof(int) * alphabet_len);
+        int letter;
+        for(i = start_index; i <= end_index; i++) {
             letter = str2[i] - 'A';
-            if(letter >= start_index && letter <= end_index)
-                appearances[letter - start_index] += 1;
+            appearances[letter] += 1;
         }
-        MPI_Gatherv(appearances, end_index - start_index + 1, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(appearances, alphabet_len, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, MPI_COMM_WORLD);
         free(appearances);
     }
     if(rank == 0) {
-        int *appearances = (int*)malloc(sizeof(int) * (alphabet_len + 1)); // '+ 1' to receive value from rank=0
-                                                                           // but it is unused
+        int *appearances = (int*)malloc(sizeof(int) * ((size - 1) * alphabet_len + 1)); // '+ 1' to receive value from rank=0
+                                                                                        // but it is unused
         int *recvcounts = (int*)malloc(sizeof(int) * size);
         int *displs = (int*)malloc(sizeof(int) * size);
         recvcounts[0] = 1;
         displs[0] = 0;
         for(i = 1; i < size; i++) {
             start_index = (i - 1) * chunk_size;
-            end_index = i * chunk_size - 1;
-            if(i == size - 1)
-                end_index = alphabet_len - 1;
-            recvcounts[i] = end_index - start_index + 1;
-            displs[i] = start_index + 1;
+            //end_index = i * chunk_size - 1;
+            //if(i == size - 1)
+            //    end_index = str2_len - 1;
+            recvcounts[i] = alphabet_len;
+            displs[i] = alphabet_len * (i - 1) + 1;
         }
         MPI_Gatherv(MPI_IN_PLACE, 1, MPI_INT, appearances, recvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
-        // appearances[0] is not valid
-        //for(i = 1; i <= alphabet_len; i++) {
-        //    printf("%c - ", 'A' + i - 1);
-        //    printf("%d\n", appearances[i]);
-        //}
+        // reduce data from all processes
+        int k;
+        int letter_displacement;
+        for(i = 1; i < alphabet_len; i++) {
+            letter_displacement = i - 1;
+            for(k = 2; k < size; k++) {
+                appearances[i] += appearances[displs[k] + letter_displacement];
+            }
+        }
+        // now appearances[1] through appearances[26] contain _global_ count of how many times every letter appears in str2
+        for(i = 1; i <= alphabet_len; i++) {
+            printf("%c - ", 'A' + i - 1);
+            printf("%d\n", appearances[i]);
+        }
         free(appearances);
         free(recvcounts);
         free(displs);
