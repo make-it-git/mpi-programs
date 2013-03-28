@@ -75,6 +75,8 @@ int main(int argc, char **argv) {
             appearances[letter] += 1;
         }
         MPI_Gatherv(appearances, alphabet_len, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(appearances, alphabet_len, MPI_INT, 0, MPI_COMM_WORLD);
+        // now every rank>0 contains _global_ count of how many times every letter from alphabet appears in str2
         free(appearances);
     }
     if(rank == 0) {
@@ -103,10 +105,11 @@ int main(int argc, char **argv) {
             }
         }
         // now appearances[1] through appearances[26] contain _global_ count of how many times every letter appears in str2
-        for(i = 1; i <= alphabet_len; i++) {
-            printf("%c - ", 'A' + i - 1);
-            printf("%d\n", appearances[i]);
-        }
+        //for(i = 1; i <= alphabet_len; i++) {
+        //    printf("%c - ", 'A' + i - 1);
+        //    printf("%d\n", appearances[i]);
+        //}
+        MPI_Bcast(appearances + 1, alphabet_len, MPI_INT, 0, MPI_COMM_WORLD);
         free(appearances);
         free(recvcounts);
         free(displs);
