@@ -218,6 +218,7 @@ int main(int argc, char **argv) {
         for(i = 0; i < dec_sequences_count; i++) {
             fprintf(F_out, "%c", str2[dec_sequences[i][dec_sequences_lengths[i] - 1]]);
         }
+        fprintf(F_out, "\n");
         fclose(F_out);
         // cleanup
         free(dec_sequences_lengths);
