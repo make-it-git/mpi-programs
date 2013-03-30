@@ -172,7 +172,65 @@ int main(int argc, char **argv) {
         #ifdef DEBUG_TIME
         end_t = MPI_Wtime();
         printf("%f seconds for creation of decreasing sequences\n", end_t - start_t);
+        start_t = MPI_Wtime();
         #endif
+        int letter_appearances;
+        int dec_sequences_count = 1;
+        int **dec_sequences = (int**)malloc(sizeof(int**) * 1);
+        dec_sequences[0] = (int*)malloc(sizeof(int) * appearances[str1[0] - 'A' + 1]);
+        int *dec_sequences_lengths = (int*)malloc(sizeof(int) * 1);
+        dec_sequences_lengths[0] = appearances[str1[0] - 'A' + 1];
+        for(i = 0; i < dec_sequences_lengths[0]; i++) {
+            dec_sequences[0][i] = ds[(int)(str1[0] - 'A')][i + 1];
+        }
+        int seq;
+        int letter;
+        int found_sequence;
+        for(i = 1; i < str1_len; i++) {
+            letter = str1[i] - 'A';
+            letter_appearances = appearances[letter + 1]; // '+1' because appearances[0] is not valid
+            for(k = 1; k <= letter_appearances; k++) {
+                found_sequence = 0;
+                for(seq = 0; seq < dec_sequences_count; seq++) {
+                    if(ds[letter][k] <= dec_sequences[seq][dec_sequences_lengths[seq] - 1]) {
+                        dec_sequences_lengths[seq] += 1;
+                        dec_sequences[seq] = (int*)realloc(dec_sequences[seq], sizeof(int) * dec_sequences_lengths[seq]);
+                        dec_sequences[seq][dec_sequences_lengths[seq] - 1] = ds[letter][k];
+                        found_sequence = 1;
+                        break;
+                    }
+                }
+                if(!found_sequence) {
+                    dec_sequences_count += 1;
+                    dec_sequences_lengths = (int*)realloc(dec_sequences_lengths, sizeof(int) * dec_sequences_count);
+                    dec_sequences_lengths[dec_sequences_count - 1] = 1;
+                    dec_sequences = (int**)realloc(dec_sequences, sizeof(int**) * dec_sequences_count);
+                    dec_sequences[dec_sequences_count - 1] = (int*)malloc(sizeof(int) * 1);
+                    dec_sequences[dec_sequences_count - 1][0] = ds[letter][k];
+                }
+            }
+        }
+        #ifdef DEBUG_TIME
+        end_t = MPI_Wtime();
+        printf("%f seconds for LCS creation\n", end_t - start_t);
+        #endif
+        FILE *F_out = fopen(filename_out, "w");
+        if(!F_out) {
+            fprintf(stderr, "Unable to open file '%s' for writing\nOutput to console...\n", filename_out);
+            F_out = stdout;
+        }
+        fprintf(F_out, "lcs length = %d\n", dec_sequences_count);
+        fprintf(F_out, "lcs sequence\n");
+        for(i = 0; i < dec_sequences_count; i++) {
+            fprintf(F_out, "%c", str2[dec_sequences[i][dec_sequences_lengths[i] - 1]]);
+        }
+        fclose(F_out);
+        // cleanup
+        free(dec_sequences_lengths);
+        for(i = 0; i < dec_sequences_count; i++) {
+            free(dec_sequences[i]);
+        }
+        free(dec_sequences);
         for(i = 0; i < alphabet_len; i++) {
             free(ds[i]);
         }
