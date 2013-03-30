@@ -112,6 +112,9 @@ int main(int argc, char **argv) {
         free(appearances);
     }
     if(rank == 0) {
+        #ifdef DEBUG_TIME
+        start_t = MPI_Wtime();
+        #endif
         int *appearances = (int*)malloc(sizeof(int) * ((size - 1) * alphabet_len + 1)); // '+ 1' to receive value from rank=0
                                                                                         // but it is unused
         int *recvcounts = (int*)malloc(sizeof(int) * size);
@@ -136,6 +139,11 @@ int main(int argc, char **argv) {
                 appearances[i] += appearances[displs[k] + letter_displacement];
             }
         }
+        #ifdef DEBUG_TIME
+        end_t = MPI_Wtime();
+        printf("%f seconds for calculation of how many times every letter appears in str2\n", end_t - start_t);
+        start_t = MPI_Wtime();
+        #endif
         // now appearances[1] through appearances[26] contain _global_ count of how many times every letter appears in str2
         // broadcast it to all processes
         MPI_Bcast(appearances + 1, alphabet_len, MPI_INT, 0, MPI_COMM_WORLD);
@@ -161,13 +169,10 @@ int main(int argc, char **argv) {
             }
             MPI_Gatherv(MPI_IN_PLACE, 1, MPI_INT, ds[i], recvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
         }
-        for(i = 0; i < alphabet_len; i++) {
-            printf("%c\t", alphabet[i]);
-            for(k = 1; k <= appearances[i + 1]; k++) {
-                printf("%d ", ds[i][k]);
-            }
-            printf("\n");
-        }
+        #ifdef DEBUG_TIME
+        end_t = MPI_Wtime();
+        printf("%f seconds for creation of decreasing sequences\n", end_t - start_t);
+        #endif
         for(i = 0; i < alphabet_len; i++) {
             free(ds[i]);
         }
