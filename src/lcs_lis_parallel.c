@@ -77,6 +77,34 @@ int main(int argc, char **argv) {
         MPI_Gatherv(appearances, alphabet_len, MPI_INT, NULL, NULL, NULL, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(appearances, alphabet_len, MPI_INT, 0, MPI_COMM_WORLD);
         // now every rank>0 contains _global_ count of how many times every letter from alphabet appears in str2
+        int *ds[alphabet_len], ds_length[alphabet_len]; // ds=decreasing sequence
+        for(i = 0; i < alphabet_len; i++) {
+            ds[i] = (int*)malloc(sizeof(int) * appearances[i]);
+            // ds[0] corresponds to letter 'A'
+            // if str2='bacdeafa', then ds[0]={8, 6, 2}
+            memset(ds[i], 0, sizeof(int) * appearances[i]);
+            ds_length[i] = 0;
+        }
+        // every rank>0 processes it's part of str2
+        // but now rank=1 processes _last_ part of str2
+        // for example, if str2='abcdefghj', size=4 (including rank=0)
+        // then rank=1 processes 'ghj', rank=2 - 'def', rank=3 - 'abc'
+        start_index = (size - (rank + 1)) * chunk_size;
+        end_index = (size - rank) * chunk_size - 1;
+        if(rank == 1) {
+            end_index = str2_len - 1;
+        }
+        for(i = end_index; i >= start_index; i--) {
+           letter = str2[i] - 'A';
+           ds[letter][ds_length[letter]] = i;
+           ds_length[letter] += 1;
+        }
+        // decreasing sequence is done, send results to rank=0
+        MPI_Gather(ds_length, alphabet_len, MPI_INT, NULL, 0, MPI_INT, 0, MPI_COMM_WORLD);
+        // cleanup
+        for(i = 0; i < alphabet_len; i++) {
+            free(ds[i]);
+        }
         free(appearances);
     }
     if(rank == 0) {
@@ -105,16 +133,16 @@ int main(int argc, char **argv) {
             }
         }
         // now appearances[1] through appearances[26] contain _global_ count of how many times every letter appears in str2
-        //for(i = 1; i <= alphabet_len; i++) {
-        //    printf("%c - ", 'A' + i - 1);
-        //    printf("%d\n", appearances[i]);
-        //}
+        // broadcast it to all processes
         MPI_Bcast(appearances + 1, alphabet_len, MPI_INT, 0, MPI_COMM_WORLD);
+        // receive decreasing sequences' lengths
+        int ds_lengths[alphabet_len * size];
+        // rank=0 sends 26 MPI_INTs, so ds_lengths[0] through ds_lengths[25] are not significant
+        MPI_Gather(MPI_IN_PLACE, alphabet_len, MPI_INT, ds_lengths, alphabet_len, MPI_INT, 0, MPI_COMM_WORLD);
         free(appearances);
         free(recvcounts);
         free(displs);
     }
-    // now rank=0 has information about how many times every letter from alphabet appears in str2
 
     free(str1);
     free(str2);
