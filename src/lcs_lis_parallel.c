@@ -185,22 +185,16 @@ int main(int argc, char **argv) {
         }
         int seq;
         int letter;
-        int found_sequence;
         for(i = 1; i < str1_len; i++) {
             letter = str1[i] - 'A';
             letter_appearances = appearances[letter + 1]; // '+1' because appearances[0] is not valid
             for(k = 1; k <= letter_appearances; k++) {
-                found_sequence = 0;
-                for(seq = 0; seq < dec_sequences_count; seq++) {
-                    if(ds[letter][k] <= dec_sequences[seq][dec_sequences_lengths[seq] - 1]) {
-                        dec_sequences_lengths[seq] += 1;
-                        dec_sequences[seq] = (int*)realloc(dec_sequences[seq], sizeof(int) * dec_sequences_lengths[seq]);
-                        dec_sequences[seq][dec_sequences_lengths[seq] - 1] = ds[letter][k];
-                        found_sequence = 1;
-                        break;
-                    }
-                }
-                if(!found_sequence) {
+                seq = lower_bound(dec_sequences, dec_sequences_lengths, dec_sequences_count, ds[letter][k]);
+                if(seq >= 0) {
+                    dec_sequences_lengths[seq] += 1;
+                    dec_sequences[seq] = (int*)realloc(dec_sequences[seq], sizeof(int) * dec_sequences_lengths[seq]);
+                    dec_sequences[seq][dec_sequences_lengths[seq] - 1] = ds[letter][k];
+                } else {
                     dec_sequences_count += 1;
                     dec_sequences_lengths = (int*)realloc(dec_sequences_lengths, sizeof(int) * dec_sequences_count);
                     dec_sequences_lengths[dec_sequences_count - 1] = 1;
