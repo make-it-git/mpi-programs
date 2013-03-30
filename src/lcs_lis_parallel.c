@@ -101,6 +101,10 @@ int main(int argc, char **argv) {
         }
         // decreasing sequence is done, send results to rank=0
         MPI_Gather(ds_length, alphabet_len, MPI_INT, NULL, 0, MPI_INT, 0, MPI_COMM_WORLD);
+        // now send all ds's
+        for(i = 0; i < alphabet_len; i++) {
+            MPI_Gatherv(ds[i], ds_length[i], MPI_INT, NULL, NULL, NULL, MPI_INT, 0, MPI_COMM_WORLD);
+        }
         // cleanup
         for(i = 0; i < alphabet_len; i++) {
             free(ds[i]);
@@ -126,7 +130,7 @@ int main(int argc, char **argv) {
         // reduce data from all processes
         int k;
         int letter_displacement;
-        for(i = 1; i < alphabet_len; i++) {
+        for(i = 1; i <= alphabet_len; i++) {
             letter_displacement = i - 1;
             for(k = 2; k < size; k++) {
                 appearances[i] += appearances[displs[k] + letter_displacement];
@@ -139,6 +143,34 @@ int main(int argc, char **argv) {
         int ds_lengths[alphabet_len * size];
         // rank=0 sends 26 MPI_INTs, so ds_lengths[0] through ds_lengths[25] are not significant
         MPI_Gather(MPI_IN_PLACE, alphabet_len, MPI_INT, ds_lengths, alphabet_len, MPI_INT, 0, MPI_COMM_WORLD);
+        int *ds[alphabet_len];
+        recvcounts[0] = 1;
+        displs[0] = 0;
+        for(i = 0; i < alphabet_len; i++) {
+            // only appearances[1] through appearances[26] contain _global_ count
+            ds[i] = (int*)malloc(sizeof(int) * (appearances[i + 1] + 1)); // '+1' to receive value from rank=0
+            for(k = 1; k < size; k++) {
+                recvcounts[k] = ds_lengths[alphabet_len * k + i];
+                //k=1 - rank=1. ds_length[26] - 'A', ds_lengths[27] - 'B'
+                //k=2 - rank=2, ds_length[52] - 'A', ds_lengths[53] - 'B'
+                if(k == 1) {
+                    displs[k] = 1;
+                } else {
+                    displs[k] = ds_lengths[alphabet_len * (k - 1) + i] + displs[k - 1];
+                }
+            }
+            MPI_Gatherv(MPI_IN_PLACE, 1, MPI_INT, ds[i], recvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+        for(i = 0; i < alphabet_len; i++) {
+            printf("%c\t", alphabet[i]);
+            for(k = 1; k <= appearances[i + 1]; k++) {
+                printf("%d ", ds[i][k]);
+            }
+            printf("\n");
+        }
+        for(i = 0; i < alphabet_len; i++) {
+            free(ds[i]);
+        }
         free(appearances);
         free(recvcounts);
         free(displs);
