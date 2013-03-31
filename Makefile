@@ -55,10 +55,10 @@ bin/lcs_lis_parallel: src/lcs_lis_parallel.c obj/lcs_lis_functions.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 obj/lcs_functions_openmp.o: src/lcs_functions_openmp.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) -c -o $@ $^ -fopenmp
 
 bin/lcs_parallel_openmp: src/lcs_parallel_openmp.c obj/lcs_functions_openmp.o
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ -fopenmp
 
 clean:
 	rm -f obj/*.o bin/*

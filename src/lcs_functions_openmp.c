@@ -3,6 +3,7 @@
 int *parallel_calc_P(char *string2, int string2_length, char *alphabet, int alphabet_length) {
     int i, j;
     int *P = (int*)malloc(sizeof(int) * alphabet_length * (string2_length + 1));
+    #pragma omp parallel for shared(i) private(j)
     for(i = 0; i < alphabet_length; i++) {
         P[i * (string2_length + 1)] = 0;
         for(j = 1; j <= string2_length; j++) {
@@ -21,6 +22,7 @@ int *parallel_calc_S(int *P, char *alphabet, char *string1, int string1_length, 
     int *S = (int*)malloc(sizeof(int) * (string1_length + 1) * (string2_length + 1));
     int ch;
     for(i = 0; i <= string1_length; i++) {
+        #pragma omp parallel for
         for(j = 0; j <= string2_length; j++) {
             if(i == 0 || j == 0) {
                 S[i * (string2_length + 1) + j] = 0;
