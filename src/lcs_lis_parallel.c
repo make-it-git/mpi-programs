@@ -192,9 +192,9 @@ int main(int argc, char **argv) {
                 seq = lower_bound(dec_sequences, dec_sequences_lengths, dec_sequences_count, ds[letter][k]);
                 if(seq >= 0) {
                     dec_sequences_lengths[seq] += 1;
-                    dec_sequences[seq] = (int*)realloc(dec_sequences[seq], sizeof(int) * dec_sequences_lengths[seq]);
-                    dec_sequences[seq][dec_sequences_lengths[seq] - 1] = ds[letter][k];
-                } else {
+                    dec_sequences[seq] = (int*)realloc(dec_sequences[seq], sizeof(int) * dec_sequences_lengths[seq]); // it is bad, i know
+                    dec_sequences[seq][dec_sequences_lengths[seq] - 1] = ds[letter][k]; // but would not rewrite this, because it will still be slower
+                } else {                                                                // than lcs_sequential
                     dec_sequences_count += 1;
                     dec_sequences_lengths = (int*)realloc(dec_sequences_lengths, sizeof(int) * dec_sequences_count);
                     dec_sequences_lengths[dec_sequences_count - 1] = 1;
